@@ -35,16 +35,15 @@
                 const alerts = await response.json();
 
                 const tableBody = document.getElementById("alertTable");
-                tableBody.innerHTML = ""; // Clear old data
-
+                tableBody.innerHTML = "";
                 alerts.forEach(alert => {
                     tableBody.innerHTML += `
-                        <tr class="hover:bg-slate-700 transition">
-                            <td class="p-4 font-semibold text-blue-400">${alert.name}</td>
-                            <td class="p-4">${alert.location}</td>
-                            <td class="p-4 text-slate-400">${new Date(alert.timestamp).toLocaleString()}</td>
+                    <tr class="hover:bg-slate-700 transition">
+                        <td class="p-4 font-semibold text-blue-400">${alert.studentId || "Unknown"}</td>
+                        <td class="p-4 text-slate-300">Lat: ${alert.latitude}, Long: ${alert.longitude}</td>
+                        <td class="p-4 text-slate-400">${alert.time ? new Date(alert.time).toLocaleString() : "No Date"}</td>
                         </tr>`;
-                });
+                    });
             } catch (error) {
                 console.error("Error loading alerts:", error);
             }
