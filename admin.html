@@ -1,17 +1,54 @@
-async function loadAlerts() {
-    const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
-    const response = await fetch(RENDER_URL);
-    const alerts = await response.json();
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Campus Security Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-white font-sans p-8" onload="loadAlerts()">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-3xl font-bold text-red-500 mb-6 flex items-center">
+            <span class="mr-2">🚨</span> Live SOS Alerts
+        </h1>
+        
+        <div class="bg-slate-800 rounded-lg overflow-hidden shadow-xl">
+            <table class="w-full text-left">
+                <thead class="bg-slate-700 text-slate-300">
+                    <tr>
+                        <th class="p-4">Name</th>
+                        <th class="p-4">Location</th>
+                        <th class="p-4">Time Received</th>
+                    </tr>
+                </thead>
+                <tbody id="alertTable" class="divide-y divide-slate-700">
+                    </tbody>
+            </table>
+        </div>
+    </div>
 
-    let tableBody = document.getElementById("alertTable");
-    tableBody.innerHTML = "";
+    <script>
+        async function loadAlerts() {
+            const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
+            try {
+                const response = await fetch(RENDER_URL);
+                const alerts = await response.json();
 
-    alerts.forEach(alert => {
-        tableBody.innerHTML += `
-            <tr>
-                <td>${alert.name}</td>
-                <td>${alert.location}</td>
-                <td>${new Date(alert.timestamp).toLocaleString()}</td>
-            </tr>`;
-    });
-}
+                const tableBody = document.getElementById("alertTable");
+                tableBody.innerHTML = ""; // Clear old data
+
+                alerts.forEach(alert => {
+                    tableBody.innerHTML += `
+                        <tr class="hover:bg-slate-700 transition">
+                            <td class="p-4 font-semibold text-blue-400">${alert.name}</td>
+                            <td class="p-4">${alert.location}</td>
+                            <td class="p-4 text-slate-400">${new Date(alert.timestamp).toLocaleString()}</td>
+                        </tr>`;
+                });
+            } catch (error) {
+                console.error("Error loading alerts:", error);
+            }
+        }
+    </script>
+</body>
+</html>
