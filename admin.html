@@ -11,8 +11,12 @@
         <h1 class="text-3xl font-bold text-red-500 mb-6 flex items-center">
             <span class="mr-2">🚨</span> Live SOS Alerts
         </h1>
-        
         <div class="bg-slate-800 rounded-lg overflow-hidden shadow-xl">
+            <div class="flex justify-end mb-4">
+                <button onclick="clearDatabase()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-lg flex items-center gap-2 text-sm">
+                    🗑️ Clear All Alerts
+                </button>
+            </div>
             <table class="w-full text-left">
                 <thead class="bg-slate-700 text-slate-300">
                     <tr>
@@ -27,27 +31,59 @@
         </div>
     </div>
 
-    <script>
-        async function loadAlerts() {
-            const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
-            try {
-                const response = await fetch(RENDER_URL);
-                const alerts = await response.json();
+   <script>
+    async function clearDatabase() {
+    if (!confirm("Are you sure? This will delete ALL emergency records!")) return;
 
-                const tableBody = document.getElementById("alertTable");
-                tableBody.innerHTML = "";
-                alerts.forEach(alert => {
-                    tableBody.innerHTML += `
-                    <tr class="hover:bg-slate-700 transition">
-                        <td class="p-4 font-semibold text-blue-400">${alert.studentId || "Unknown"}</td>
-                        <td class="p-4 text-slate-300">Lat: ${alert.latitude}, Long: ${alert.longitude}</td>
-                        <td class="p-4 text-slate-400">${alert.time ? new Date(alert.time).toLocaleString() : "No Date"}</td>
-                        </tr>`;
-                    });
-            } catch (error) {
-                console.error("Error loading alerts:", error);
-            }
+    const DELETE_URL = "https://disaster-api-af2w.onrender.com/api/clear-all";
+    
+    try {
+        const response = await fetch(DELETE_URL, { method: 'DELETE' });
+        if (response.ok) {
+            alert("Database Cleared! 🧹");
+            loadAlerts(); // Refresh the table so it becomes empty
         }
-    </script>
+    } catch (error) {
+        console.error("Delete failed:", error);
+        alert("Could not connect to server.");
+    }
+}
+    async function loadAlerts() {
+        const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
+        const tableBody = document.getElementById("alertTable");
+
+        try {
+            const response = await fetch(RENDER_URL);
+            const alerts = await response.json();
+
+            tableBody.innerHTML = "";
+
+            alerts.reverse().forEach(alert => {
+                const lat = alert.latitude || 0;
+                const lon = alert.longitude || 0;
+                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
+
+                const row = `
+                    <tr class="hover:bg-slate-800 transition border-b border-slate-700">
+                        <td class="p-4 font-bold text-blue-400">${alert.studentId || "Unknown"}</td>
+                        <td class="p-4 text-emerald-400">
+                            <a href="${mapsLink}" target="_blank" class="hover:underline flex items-center gap-2">
+                                📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}
+                            </a>
+                        </td>
+                        <td class="p-4 text-slate-400 font-mono">${alert.time || "No Date"}</td>
+                    </tr>
+                `;
+                tableBody.innerHTML += row;
+            });
+        } catch (error) {
+            console.error("Fetch error:", error);
+            tableBody.innerHTML = "<tr><td colspan='3' class='p-4 text-center text-red-500'>Connection Error</td></tr>";
+        }
+    }
+
+    setInterval(loadAlerts, 5000);
+    window.onload = loadAlerts;
+</script>
 </body>
 </html>
