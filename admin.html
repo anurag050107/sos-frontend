@@ -1,0 +1,17 @@
+async function loadAlerts() {
+    const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
+    const response = await fetch(RENDER_URL);
+    const alerts = await response.json();
+
+    let tableBody = document.getElementById("alertTable");
+    tableBody.innerHTML = "";
+
+    alerts.forEach(alert => {
+        tableBody.innerHTML += `
+            <tr>
+                <td>${alert.name}</td>
+                <td>${alert.location}</td>
+                <td>${new Date(alert.timestamp).toLocaleString()}</td>
+            </tr>`;
+    });
+}
