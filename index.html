@@ -886,21 +886,7 @@
         &copy; 2026 ResilientCampus Safety Initiative
     </footer>
 <script>
-
-
-        
-        if (response.ok) {
-            if (status) status.innerText = "✅ SOS Received by Campus Security!";
-            console.log("Success: Saved to MongoDB");
-        } else {
-            if (status) status.innerText = "❌ Server Error. Try again.";
-        }
-
-    } catch (error) {
-        if (status) status.innerText = "❌ Connection Failed. Check internet.";
-        console.error("Error details:", error);
-    }
-}async function sendAlert() {
+async function sendAlert() {
     const status = document.getElementById("status");
     if (status) status.innerText = "Finding your location...";
 
