@@ -1606,41 +1606,66 @@ document.addEventListener('DOMContentLoaded', () => {
         &copy; 2026 ResilientCampus Safety Initiative
     </footer>
 
+
     <script>
         async function sendAlert() {
-    const status = document.getElementById('status-message'); // Make sure you have this ID in your HTML
-    status.innerText = "⏳ Sending SOS...";
+            const status = document.getElementById('statusMessage');
+            const btn = document.getElementById('sosBtn');
 
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        // 1. We name the data 'myData' so the fetch function can find it
-        const myData = {
-            student: "Anurag_Rai",
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            time: new Date().toLocaleString()
-        };
+            status.innerText = "Getting location...";
+            status.className = "mt-6 font-semibold text-orange-500";
 
-        try {
-            // 2. We change 'localhost' to your LIVE Render URL
-            const response = await fetch('https://disaster-api-af2w.onrender.com', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(myData),
+            navigator.geolocation.getCurrentPosition(async (position) => {
+                const myData = {
+                    student: "Student_User", 
+                    lat: position.coords.latitude,
+                    lon: position.coords.longitude,
+                    time: new Date().toLocaleTimeString()
+                };
+
+                try {
+                    const response = await fetch('http://localhost:8080/api/trigger-sos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(myData)
+                    });
+
+                    if (response.ok) {
+                        status.innerText = "SUCCESS: Alert sent to Java Server!";
+                        status.className = "mt-6 font-semibold text-green-600";
+                        btn.classList.remove('sos-pulse');
+                        btn.classList.add('bg-green-600');
+                        btn.innerText = "SENT";
+                    }
+                } catch (error) {
+                    status.innerText = "Java Server is not running! (Check IntelliJ)";
+                    status.className = "mt-6 font-semibold text-red-600";
+                }
+            }, (err) => {
+                status.innerText = "Please enable GPS to send SOS.";
             });
-
-            if (response.ok) {
-                status.innerText = "✅ SUCCESS: Alert sent to Campus Security!";
-                status.style.color = "green";
-            } else {
-                status.innerText = "❌ ERROR: Server responded but failed.";
-            }
-        } catch (error) {
-            status.innerText = "❌ ERROR: Could not connect to server. Is it awake?";
-            console.error("Fetch error:", error);
         }
-    });
-}
     </script>
 
+=======
+<script>
+async function submitToBackend(data) {
+    try {
+        const response = await fetch("https://disaster-api-af2w.onrender.com/api/save-sos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            alert("✅ SOS Sent Successfully!"); 
+        } else {
+            alert("❌ Server Error: Message not sent.");
+        }
+    } catch (error) {
+        alert("⚠️ Waiting for server to wake up... try again in 10 seconds.");
+    }
+}
+</script>
+>>>>>>> 6204fe5 (Cleaning up and saving everything before push)
 </body>
 </html>
