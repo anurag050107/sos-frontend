@@ -886,38 +886,21 @@
         &copy; 2026 ResilientCampus Safety Initiative
     </footer>
 <script>
-async function sendAlert() {
-    const status = document.getElementById("status");
-    if (status) status.innerText = "Finding your location...";
-
-    
-    navigator.geolocation.getCurrentPosition(
-        async (position) => {
-            const lat = position.coords.latitude;
-            const long = position.coords.longitude;
-            
-            if (status) status.innerText = "Location found! Sending SOS...";
-
-            
-            const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/trigger-sos";
-            await fetch(RENDER_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentId: "Anurag123",
-                    latitude: lat,
-                    longitude: long
-                })
-            });
-
-            if (status) status.innerText = "🚨 SOS Sent Successfully!";
-        },
-        (error) => {
-            alert("Error: Please enable location to send an SOS.");
-            if (status) status.innerText = "Error: Location denied.";
-        },
-        { enableHighAccuracy: true, timeout: 10000 } 
-    );
+async function submitToBackend(data) {
+    try {
+        const response = await fetch("https://disaster-api-af2w.onrender.com/api/save-sos", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+        if (response.ok) {
+            alert("✅ SOS Sent Successfully!"); 
+        } else {
+            alert("❌ Server Error: Message not sent.");
+        }
+    } catch (error) {
+        alert("⚠️ Waiting for server to wake up... try again in 10 seconds.");
+    }
 }
 </script>
 </body>
