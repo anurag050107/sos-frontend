@@ -1614,11 +1614,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     navigator.geolocation.getCurrentPosition(async (position) => {
         const myData = {
-            name: "Anurag_Rai",
-            lat: position.coords.latitude,
-            lon: position.coords.longitude,
-            time: new Date().toLocaleString()
-        };
+    name: "Anurag_Rai",
+    lat: position.coords.latitude,
+    lon: position.coords.longitude,
+    time: new Date().toLocaleString()
+  };
 
         try {
             const response = await fetch('https://disaster-api-af2w.onrender.com/api/trigger-sos', {
