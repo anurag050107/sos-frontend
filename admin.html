@@ -19,10 +19,12 @@
             </div>
             <table class="w-full text-left">
                 <thead class="bg-slate-700 text-slate-300">
-                    <tr>
-                        <th class="p-4">Name</th>
-                        <th class="p-4">Location</th>
-                        <th class="p-4">Time Received</th>
+        <tr>
+            <th class="p-4 text-left">Name</th>
+            <th class="p-4 text-left">Location</th>
+            <th class="p-4 text-left">Verification Proof</th> <th class="p-4 text-left">Time Received</th>
+        </tr>
+    </thead>
                     </tr>
                 </thead>
                 <tbody id="alertTable" class="divide-y divide-slate-700">
@@ -32,36 +34,40 @@
     </div>
 
    <script>
-    async function clearDatabase() {
-    if (!confirm("Are you sure? This will delete ALL emergency records!")) return;
+    const tableBody = document.querySelector('tbody');
 
-    const DELETE_URL = "https://disaster-api-af2w.onrender.com/api/clear-all";
-    
-    try {
-        const response = await fetch(DELETE_URL, { method: 'DELETE' });
-        if (response.ok) {
-            alert("Database Cleared! 🧹");
-            loadAlerts(); // Refresh the table so it becomes empty
-        }
-    } catch (error) {
-        console.error("Delete failed:", error);
-        alert("Could not connect to server.");
-    }
-}
     async function loadAlerts() {
-        const RENDER_URL = "https://disaster-api-af2w.onrender.com/api/all-alerts";
-        const tableBody = document.getElementById("alertTable");
-
         try {
-            const response = await fetch(RENDER_URL);
+            
+            const response = await fetch('https://disaster-api-af2w.onrender.com/api/alerts'); 
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
             const alerts = await response.json();
-
-            tableBody.innerHTML = "";
+            tableBody.innerHTML = ""; 
 
             alerts.reverse().forEach(alert => {
                 const lat = alert.latitude || 0;
                 const lon = alert.longitude || 0;
-                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                const mapsLink = `https://www.google.com/maps?q=$${lat},${lon}`;
+
+                let mediaContent = `<span class="text-slate-500 italic text-xs">No media attached</span>`;
+                
+                if (alert.mediaUrl && alert.mediaUrl !== "No media uploaded") {
+                    if (alert.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) || alert.mediaUrl.includes("/video/")) {
+                        mediaContent = `
+                            <video src="${alert.mediaUrl}" controls class="w-32 h-20 object-cover rounded-md border border-slate-600 bg-black shadow-sm"></video>
+                        `;
+                    } else {
+                        mediaContent = `
+                            <a href="${alert.mediaUrl}" target="_blank">
+                                <img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200">
+                            </a>
+                        `;
+                    }
+                }
 
                 const row = `
                     <tr class="hover:bg-slate-800 transition border-b border-slate-700">
@@ -71,19 +77,19 @@
                                 📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}
                             </a>
                         </td>
+                        <td class="p-4">${mediaContent}</td>
                         <td class="p-4 text-slate-400 font-mono">${alert.time || "No Date"}</td>
                     </tr>
                 `;
+                
                 tableBody.innerHTML += row;
             });
         } catch (error) {
-            console.error("Fetch error:", error);
-            tableBody.innerHTML = "<tr><td colspan='3' class='p-4 text-center text-red-500'>Connection Error</td></tr>";
+            console.error("Failed to load alerts:", error);
+            tableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500 font-bold">Error loading dashboard data. Check backend connection.</td></tr>`;
         }
     }
-
-    setInterval(loadAlerts, 15000);
-    window.onload = loadAlerts;
+    loadAlerts();
 </script>
 </body>
 </html>

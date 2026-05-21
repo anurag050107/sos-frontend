@@ -41,8 +41,15 @@
         <button onclick="sendAlert()" id="sosBtn" class="sos-pulse bg-red-600 hover:bg-red-700 text-white w-40 h-40 rounded-full text-3xl font-black shadow-xl transition-all active:scale-95">
             SOS
         </button>
+        <div class="mt-4 text-center">
+    <label class="block mb-2 text-sm font-medium text-slate-700 font-semibold">
+        📸 Optional: Capture/Attach Photo or Video Proof
+    </label>
+    <input type="file" id="mediaProof" accept="image/*,video/*" capture="environment" 
+           class="block w-full max-w-xs mx-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer">
+</div>
         
-        <p id="statusMessage" class="mt-6 font-semibold text-slate-500"></p>
+        <p id="status-message" class="mt-6 font-semibold text-slate-500"></p>
     </section>
 
     <hr class="border-slate-200">
@@ -1607,43 +1614,73 @@ document.addEventListener('DOMContentLoaded', () => {
     </footer>
 
     <script>
-        async function sendAlert() {
-            const status = document.getElementById('statusMessage');
-            const btn = document.getElementById('sosBtn');
+        // 1. Capture Identity when the page loads
+let activeUserEmail = localStorage.getItem("verifiedCampusEmail");
+if (!activeUserEmail) {
+    activeUserEmail = prompt("🔒 Enter your Campus Email Address to activate safety tracking:", "student@college.edu");
+    if (activeUserEmail && activeUserEmail.trim() !== "") {
+        localStorage.setItem("verifiedCampusEmail", activeUserEmail);
+    } else {
+        activeUserEmail = "anonymous_student@college.edu";
+    }
+}
 
-            status.innerText = "Getting location...";
-            status.className = "mt-6 font-semibold text-orange-500";
+async function sendAlert() {
+    console.log("Button was clicked! Function is starting...");
+    const status = document.getElementById('status-message');
+    status.innerText = "⏳ Processing SOS and uploading media...";
 
-            navigator.geolocation.getCurrentPosition(async (position) => {
-                const myData = {
-                    student: "Student_User", 
-                    lat: position.coords.latitude,
-                    lon: position.coords.longitude,
-                    time: new Date().toLocaleTimeString()
-                };
+    navigator.geolocation.getCurrentPosition(async (position) => {
+        const fileInput = document.getElementById('mediaProof');
+        let finalMediaUrl = "No media uploaded";
 
-                try {
-                    const response = await fetch('http://localhost:8080/api/trigger-sos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(myData)
-                    });
+        try {
+            if (fileInput && fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const cloudinaryData = new FormData();
+                cloudinaryData.append("file", file);
+                
+                cloudinaryData.append("upload_preset", "hackathon_sos"); 
+                const cloudResponse = await fetch("https://api.cloudinary.com/v1_1/dzalvca0h/upload", {
+                    method: "POST",
+                    body: cloudinaryData
+                });
+                
+                const cloudResult = await cloudResponse.json();
+                finalMediaUrl = cloudResult.secure_url; // Gets the live web link
+                console.log("Cloudinary Upload Success:", finalMediaUrl);
+            }
 
-                    if (response.ok) {
-                        status.innerText = "SUCCESS: Alert sent to Java Server!";
-                        status.className = "mt-6 font-semibold text-green-600";
-                        btn.classList.remove('sos-pulse');
-                        btn.classList.add('bg-green-600');
-                        btn.innerText = "SENT";
-                    }
-                } catch (error) {
-                    status.innerText = "Java Server is not running! (Check IntelliJ)";
-                    status.className = "mt-6 font-semibold text-red-600";
-                }
-            }, (err) => {
-                status.innerText = "Please enable GPS to send SOS.";
+
+            const backendData = new FormData();
+            backendData.append("studentId", activeUserEmail);
+            backendData.append("latitude", position.coords.latitude);
+            backendData.append("longitude", position.coords.longitude);
+            backendData.append("time", new Date().toLocaleString());
+            backendData.append("mediaUrl", finalMediaUrl); 
+
+            console.log("Sending payload to backend...");
+            const response = await fetch('https://disaster-api-af2w.onrender.com/api/trigger-sos', {
+                method: 'POST',
+                body: backendData
             });
+
+            if (response.ok) {
+                status.innerText = "✅ SOS Sent Successfully with verification link!";
+                console.log("Backend Success!");
+            } else {
+                status.innerText = "❌ Backend tracking server error.";
+                console.error("Backend Error:", response.status);
+            }
+        } catch (error) {
+            console.error("Fetch Error:", error);
+            status.innerText = "❌ Critical Connection Failure!";
         }
+    }, (error) => {
+         console.error("Geolocation Error:", error);
+         status.innerText = "❌ Location permission denied.";
+    });
+}
     </script>
 
 </body>
