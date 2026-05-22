@@ -1647,12 +1647,37 @@ async function sendAlert() {
                 });
                 
                 const cloudResult = await cloudResponse.json();
-                finalMediaUrl = cloudResult.secure_url; // Gets the live web link
+                finalMediaUrl = cloudResult.secure_url;
                 console.log("Cloudinary Upload Success:", finalMediaUrl);
             }
 
 
             const backendData = new FormData();
+    let finalMediaUrl = "";
+    const fileInput = document.querySelector('input[type="file"]');
+
+    if (fileInput && fileInput.files.length > 0) {
+        console.log("Found an image, uploading to ImgBB...");
+        
+        const imgData = new FormData();
+        imgData.append("image", fileInput.files[0]);
+
+        const imgbbKey = "e497c00774c66341b312c180abbbd2bf";
+        try {
+            const imgRes = await fetch(`https://api.imgbb.com/1/upload?key=${imgbbKey}`, {
+                method: "POST",
+                body: imgData
+            });
+            const imgJson = await imgRes.json();
+            
+            if (imgJson.success) {
+                finalMediaUrl = imgJson.data.url;
+                console.log("Image Cloud Link:", finalMediaUrl);
+            }
+        } catch (err) {
+            console.error("ImgBB Upload Error:", err);
+        }
+    }
             backendData.append("studentId", activeUserEmail);
             backendData.append("latitude", position.coords.latitude);
             backendData.append("longitude", position.coords.longitude);
