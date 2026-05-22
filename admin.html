@@ -53,6 +53,9 @@
                 const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
 
                 let mediaContent = `<span class="text-slate-500 italic text-xs">No media attached</span>`;
+                if (alert.mediaUrl && alert.mediaUrl.trim() !== "") {
+    mediaContent = `<a href="${alert.mediaUrl}" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline font-semibold">📸 View Proof</a>`;
+}
                 
                 if (alert.mediaUrl && alert.mediaUrl !== "No media uploaded") {
                     if (alert.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) || alert.mediaUrl.includes("/video/")) {
