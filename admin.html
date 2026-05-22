@@ -39,8 +39,7 @@
     async function loadAlerts() {
         try {
             
-            const response = await fetch('https://disaster-api-af2w.onrender.com/api/alerts'); 
-            
+            const response = await fetch('https://disaster-api-af2w.onrender.com/api/all-alerts');            
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
