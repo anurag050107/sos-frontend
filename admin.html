@@ -50,7 +50,7 @@
             alerts.reverse().forEach(alert => {
                 const lat = alert.latitude || 0;
                 const lon = alert.longitude || 0;
-                const mapsLink = `https://www.google.com/maps?q=$${lat},${lon}`;
+                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
 
                 let mediaContent = `<span class="text-slate-500 italic text-xs">No media attached</span>`;
                 
