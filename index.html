@@ -1754,25 +1754,24 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 3. Foolproof Translation Script
+       // 3. The Ultimate Translation Override (Cookie Method)
         function changeLanguage(langCode) {
             localStorage.setItem("preferredLanguage", langCode);
-            var selectEl = document.querySelector('.goog-te-combo');
-            if (selectEl) {
-                selectEl.value = langCode;
-                selectEl.dispatchEvent(new Event('change'));
-            } else {
-                setTimeout(function() { changeLanguage(langCode); }, 500);
-            }
+            document.cookie = "googtrans=/en/" + langCode + "; path=/";
+            document.cookie = "googtrans=/en/" + langCode + "; domain=" + window.location.hostname + "; path=/";
+            window.location.reload();
         }
 
         window.addEventListener('load', function() {
             var savedLang = localStorage.getItem("preferredLanguage") || "en";
             var picker = document.getElementById("language-picker");
-            if (picker) picker.value = savedLang;
+            if (picker) {
+                picker.value = savedLang; 
+            }
             
-            if (savedLang !== "en") {
-                setTimeout(function() { changeLanguage(savedLang); }, 1000);
+            if (savedLang !== "en" && document.cookie.indexOf("googtrans=/en/" + savedLang) === -1) {
+                document.cookie = "googtrans=/en/" + savedLang + "; path=/";
+                window.location.reload();
             }
         });
     </script>
