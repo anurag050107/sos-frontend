@@ -96,7 +96,9 @@
             <a href="#news" class="hover:text-red-600">News</a>
             <a href="#Quiz" class="hover:text-red-600">Quiz</a>
             <a href="#sos" class="bg-red-600 text-white px-4 py-2 rounded-lg">Emergency SOS</a>
-            
+            <button id="installAppBtn" style="display: none;" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 ml-2">
+              📲 Download App
+            </button>
             <!-- Language Selector -->
              <div id="select-language" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
                 <span class="text-base leading-none">🌐</span>
@@ -1808,5 +1810,27 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         }
     </script>
+    <script>
+let deferredPrompt;
+const installBtn = document.getElementById('installAppBtn');
+
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    installBtn.style.display = 'inline-block';
+});
+
+installBtn.addEventListener('click', async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        if (outcome === 'accepted') {
+            console.log('App Installed Successfully');
+        }
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+    }
+});
+</script>
 </body>
 </html>
