@@ -1,43 +1,21 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Security Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* Hide Google Translate top bar and banner elements to keep UI premium */
-        .goog-te-banner-frame.skiptranslate,
-        .goog-te-banner-frame,
-        iframe.goog-te-banner-frame {
-            display: none !important;
-        }
-
-        body {
-            top: 0px !important;
-        }
-
-        /* Hide translation tooltips */
-        #goog-gt-tt,
-        .goog-te-balloon-frame,
-        .goog-te-tooltip,
-        .goog-te-tooltip-text {
-            display: none !important;
-        }
-
-        .goog-text-highlight {
-            background-color: transparent !important;
-            box-shadow: none !important;
-        }
-
-        /* Hide original translate elements that are not our picker */
-        .skiptranslate:not(#select-language) {
-            display: none !important;
-        }
+        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
+        body { top: 0px !important; }
+        #goog-gt-tt, .goog-te-balloon-frame, .goog-te-tooltip, .goog-te-tooltip-text { display: none !important; }
+        .goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }
+        .skiptranslate:not(#select-language) { display: none !important; }
     </style>
-    <!-- Hidden Google Translate Element -->
-    <div id="google_translate_element" style="display:none !important;"></div>
+</head>
+<body class="bg-slate-900 text-white font-sans p-8">
+
+    <div id="google_translate_element" style="position: absolute; left: -9999px; z-index: -9999;"></div>
     <script>
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
@@ -49,20 +27,16 @@
         }
     </script>
     <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
-</head>
 
-<body class="bg-slate-900 text-white font-sans p-8" onload="loadAlerts()">
     <div class="max-w-4xl mx-auto">
         <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
             <h1 class="text-3xl font-bold text-red-500 flex items-center">
                 <span class="mr-2">🚨</span> Live SOS Alerts
             </h1>
-            <!-- Language Selector -->
-            <div id="select-language"
-                class="flex items-center space-x-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer text-sm">
+            
+            <div id="select-language" class="notranslate flex items-center space-x-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer text-sm">
                 <span class="text-base leading-none">🌐</span>
-                <select id="language-picker" onchange="changeLanguage(this.value)"
-                    class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
+                <select id="language-picker" onchange="changeLanguage(this.value)" class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
                     <option value="en">English</option>
                     <option value="hi">हिन्दी (Hindi)</option>
                     <option value="bn">বাংলা (Bengali)</option>
@@ -77,9 +51,8 @@
             </div>
         </div>
         <div class="bg-slate-800 rounded-lg overflow-hidden shadow-xl">
-            <div class="flex justify-end mb-4">
-                <button onclick="clearDatabase()"
-                    class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-lg flex items-center gap-2 text-sm">
+            <div class="flex justify-end mb-4 p-4 pb-0">
+                <button onclick="clearDatabase()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-lg flex items-center gap-2 text-sm">
                     🗑️ Clear All Alerts
                 </button>
             </div>
@@ -92,8 +65,6 @@
                         <th class="p-4 text-left">Time Received</th>
                     </tr>
                 </thead>
-                </tr>
-                </thead>
                 <tbody id="alertTable" class="divide-y divide-slate-700">
                 </tbody>
             </table>
@@ -105,12 +76,9 @@
 
         async function loadAlerts() {
             try {
-
                 const response = await fetch('https://disaster-api-af2w.onrender.com/api/all-alerts');
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                
                 const alerts = await response.json();
                 tableBody.innerHTML = "";
 
@@ -118,39 +86,23 @@
                     const lat = alert.latitude || 0;
                     const lon = alert.longitude || 0;
                     const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
-
                     let mediaContent = `<span class="text-slate-500 italic text-xs">No media attached</span>`;
-                    if (alert.mediaUrl && alert.mediaUrl.trim() !== "") {
-                        mediaContent = `<a href="${alert.mediaUrl}" target="_blank" class="text-emerald-400 hover:text-emerald-300 underline font-semibold">📸 View Proof</a>`;
-                    }
-
-                    if (alert.mediaUrl && alert.mediaUrl !== "No media uploaded") {
+                    
+                    if (alert.mediaUrl && alert.mediaUrl !== "No media uploaded" && alert.mediaUrl.trim() !== "") {
                         if (alert.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) || alert.mediaUrl.includes("/video/")) {
-                            mediaContent = `
-                            <video src="${alert.mediaUrl}" controls class="w-32 h-20 object-cover rounded-md border border-slate-600 bg-black shadow-sm"></video>
-                        `;
+                            mediaContent = `<video src="${alert.mediaUrl}" controls class="w-32 h-20 object-cover rounded-md border border-slate-600 bg-black shadow-sm"></video>`;
                         } else {
-                            mediaContent = `
-                            <a href="${alert.mediaUrl}" target="_blank">
-                                <img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200">
-                            </a>
-                        `;
+                            mediaContent = `<a href="${alert.mediaUrl}" target="_blank"><img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200"></a>`;
                         }
                     }
 
                     const row = `
                     <tr class="hover:bg-slate-800 transition border-b border-slate-700">
                         <td class="p-4 font-bold text-blue-400">${alert.studentId || "Unknown"}</td>
-                        <td class="p-4 text-emerald-400">
-                            <a href="${mapsLink}" target="_blank" class="hover:underline flex items-center gap-2">
-                                📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}
-                            </a>
-                        </td>
+                        <td class="p-4 text-emerald-400"><a href="${mapsLink}" target="_blank" class="hover:underline flex items-center gap-2">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</a></td>
                         <td class="p-4">${mediaContent}</td>
                         <td class="p-4 text-slate-400 font-mono">${alert.time || "No Date"}</td>
-                    </tr>
-                `;
-
+                    </tr>`;
                     tableBody.innerHTML += row;
                 });
             } catch (error) {
@@ -158,42 +110,29 @@
                 tableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500 font-bold">Error loading dashboard data. Check backend connection.</td></tr>`;
             }
         }
-        loadAlerts();
+        
+        window.addEventListener('load', loadAlerts);
 
-        // Language Selector Functions
+        // Foolproof Translation Script
         function changeLanguage(langCode) {
+            localStorage.setItem("preferredLanguage", langCode);
             var selectEl = document.querySelector('.goog-te-combo');
             if (selectEl) {
                 selectEl.value = langCode;
                 selectEl.dispatchEvent(new Event('change'));
-                localStorage.setItem("preferredLanguage", langCode);
             } else {
-                // If Google Translate is not loaded yet, retry
-                setTimeout(() => changeLanguage(langCode), 200);
+                setTimeout(function() { changeLanguage(langCode); }, 500);
             }
         }
 
-        // Auto-apply saved language preference on load
-        document.addEventListener("DOMContentLoaded", () => {
-            const savedLang = localStorage.getItem("preferredLanguage") || "en";
-            const languagePicker = document.getElementById("language-picker");
-            if (languagePicker) {
-                languagePicker.value = savedLang;
+        window.addEventListener('load', function() {
+            var savedLang = localStorage.getItem("preferredLanguage") || "en";
+            var picker = document.getElementById("language-picker");
+            if (picker) picker.value = savedLang;
+            if (savedLang !== "en") {
+                setTimeout(function() { changeLanguage(savedLang); }, 1000);
             }
-
-            // Periodically check if google translate has loaded and apply language
-            const initInterval = setInterval(() => {
-                const selectEl = document.querySelector('.goog-te-combo');
-                if (selectEl) {
-                    clearInterval(initInterval);
-                    changeLanguage(savedLang);
-                }
-            }, 100);
-
-            // Clear check interval after 15 seconds to prevent memory leaks
-            setTimeout(() => clearInterval(initInterval), 15000);
         });
     </script>
 </body>
-
 </html>

@@ -1,6 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#ef4444">
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('Offline App Ready!'))
+        .catch(err => console.log('Service Worker Failed', err));
+    });
+  }
+</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Campus Safety - Disaster Prep</title>
@@ -31,7 +43,10 @@
             background-color: transparent !important;
             box-shadow: none !important;
         }
+<<<<<<< HEAD
         /* Hide original translate elements that are not our picker */
+=======
+>>>>>>> 6e0fbf4e97f15d2335064d11182ec5a90b48df40
         .skiptranslate:not(#select-language) {
             display: none !important;
         }
@@ -53,6 +68,32 @@
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
 
+    <div id="google_translate_element" style="position: absolute; left: -9999px; z-index: -9999;"></div>
+    <script>
+       // 3. Language Selector Functions (The Bulletproof Cookie Method)
+        function changeLanguage(langCode) {
+            // Write the translation command directly to the browser's memory
+            document.cookie = "googtrans=/en/" + langCode + "; path=/";
+            document.cookie = "googtrans=/en/" + langCode + "; domain=" + window.location.hostname + "; path=/";
+            
+            // Save the user's choice
+            localStorage.setItem("preferredLanguage", langCode);
+            
+            // Force a quick reload so Google reads the cookie instantly
+            window.location.reload();
+        }
+
+        // Keep the dropdown showing the correct language after reload
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedLang = localStorage.getItem("preferredLanguage") || "en";
+            const languagePicker = document.getElementById("language-picker");
+            if (languagePicker) {
+                languagePicker.value = savedLang;
+            }
+        });
+    </script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
     <nav class="bg-white shadow-sm p-4 flex justify-between items-center sticky top-0 z-50">
         <h1 class="text-xl font-bold text-red-600">ResilientCampus</h1>
         <div class="flex items-center space-x-4 text-sm font-medium">
@@ -61,8 +102,12 @@
             <a href="#Quiz" class="hover:text-red-600">Quiz</a>
             <a href="#sos" class="bg-red-600 text-white px-4 py-2 rounded-lg">Emergency SOS</a>
             
+<<<<<<< HEAD
             <!-- Language Selector -->
              <div id="select-language" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
+=======
+            <div id="select-language" class="notranslate flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
+>>>>>>> 6e0fbf4e97f15d2335064d11182ec5a90b48df40
                 <span class="text-base leading-none">🌐</span>
                 <select id="language-picker" onchange="changeLanguage(this.value)" class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
                     <option value="en">English</option>
@@ -132,12 +177,13 @@
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🔥</div>
+   
                 <h3 class="font-bold text-lg">Fire Safety</h3>
                 
                 <p class="font-extrabold text-sm text-slate-500 mt-2">How To use A fire extinguisher-</p>
                 <p class="text-sm text-slate-500 mt-2">1. Pull the safety pin to unlock the extinguisher.</p>
                 <p class="text-sm text-slate-500 mt-2">2. Aim the nozzle at the base of the fire (not the flames).</p>
-                <p class="text-sm text-slate-500 mt-2">3. Squeeze the handle to release the extinguishing agent.</p
+                <p class="text-sm text-slate-500 mt-2">3. Squeeze the handle to release the extinguishing agent.</p>
                 <p class="text-sm text-slate-500 mt-2">Check if the fire is out and be ready to repeat if needed.</p>
                 <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/UlKS_A7Xg1E?si=ed_mQygVHnCOQn2U>https://youtu.be/UlKS_A7Xg1E?si=ed_mQygVHnCOQn2U</a>
                 
@@ -1660,7 +1706,7 @@ document.addEventListener('DOMContentLoaded', () => {
     </footer>
 
     <script>
-        // 1. Capture Identity when the page loads
+        // 1. Capture Identity
         let activeUserEmail = localStorage.getItem("verifiedCampusEmail");
         if (!activeUserEmail) {
             activeUserEmail = prompt("🔒 Enter your Campus Email Address to activate safety tracking:", "student@college.edu");
@@ -1674,15 +1720,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. SOS Alert Sender
         async function sendAlert() {
             const statusEl = document.getElementById("status-message");
-            if (statusEl) {
-                statusEl.innerText = "⏳ Sending SOS alert...";
-            }
+            if (statusEl) statusEl.innerText = "⏳ Sending SOS alert...";
 
             let finalMediaUrl = "";
             const fileInput = document.querySelector('input[type="file"]');
 
             if (fileInput && fileInput.files.length > 0) {
-                console.log("Encoding image locally...");
                 const file = fileInput.files[0];
                 const base64 = await new Promise((resolve) => {
                     const reader = new FileReader();
@@ -1716,41 +1759,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             } catch (error) {
                 console.error("SOS Alert failed:", error);
-                if (statusEl) {
-                    statusEl.innerText = "❌ SOS failed. Please check location permissions.";
-                }
+                if (statusEl) statusEl.innerText = "❌ SOS failed. Please check location permissions.";
             }
         }
 
+        // 3. Foolproof Translation Script
         function changeLanguage(langCode) {
+            localStorage.setItem("preferredLanguage", langCode);
             var selectEl = document.querySelector('.goog-te-combo');
             if (selectEl) {
                 selectEl.value = langCode;
                 selectEl.dispatchEvent(new Event('change'));
-                localStorage.setItem("preferredLanguage", langCode);
             } else {
-                setTimeout(() => changeLanguage(langCode), 200);
+                setTimeout(function() { changeLanguage(langCode); }, 500);
             }
         }
 
-    document.addEventListener("DOMContentLoaded", () => {
-        const savedLang = localStorage.getItem("preferredLanguage") || "en";
-        const languagePicker = document.getElementById("language-picker");
-        if (languagePicker) {
-            languagePicker.value = savedLang;
-        }
-
-        const initInterval = setInterval(() => {
-            const selectEl = document.querySelector('.goog-te-combo');
-            if (selectEl) {
-                clearInterval(initInterval);
-                changeLanguage(savedLang);
+        window.addEventListener('load', function() {
+            var savedLang = localStorage.getItem("preferredLanguage") || "en";
+            var picker = document.getElementById("language-picker");
+            if (picker) picker.value = savedLang;
+            
+            if (savedLang !== "en") {
+                setTimeout(function() { changeLanguage(savedLang); }, 1000);
             }
-        }, 100);
-
-        setTimeout(() => clearInterval(initInterval), 15000);
-    });
+        });
     </script>
-
 </body>
 </html>
