@@ -1708,10 +1708,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // 2. SOS Alert Sender
         async function sendAlert() {
             const statusEl = document.getElementById("status-message");
-            if (statusEl) statusEl.innerText = "⏳ Sending SOS alert...";
+            if (statusEl) statusEl.innerText = "⏳ Gathering Location...";
 
             let finalMediaUrl = "";
             const fileInput = document.querySelector('input[type="file"]');
@@ -1731,10 +1730,23 @@ document.addEventListener('DOMContentLoaded', () => {
                     navigator.geolocation.getCurrentPosition(resolve, reject);
                 });
 
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+
+                
+                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
+                const emergencyMessage = `🚨 EMERGENCY SOS! I need help. My live location is: ${mapsLink}`;
+                
+                const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(emergencyMessage)}`;
+                window.open(whatsappUrl, '_blank'); 
+
+
+                if (statusEl) statusEl.innerText = "⏳ Sending to Campus Dashboard...";
+
                 const backendData = new FormData();
                 backendData.append("studentId", activeUserEmail);
-                backendData.append("latitude", position.coords.latitude);
-                backendData.append("longitude", position.coords.longitude);
+                backendData.append("latitude", lat);
+                backendData.append("longitude", lon);
                 backendData.append("time", new Date().toLocaleString());
                 backendData.append("mediaUrl", finalMediaUrl || "No media uploaded"); 
 
@@ -1744,7 +1756,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
                 if (response.ok) {
-                    if (statusEl) statusEl.innerText = "✅ SOS Sent Successfully!";
+                    if (statusEl) statusEl.innerText = "✅ SOS Sent & Dashboard Updated!";
                 } else {
                     if (statusEl) statusEl.innerText = "❌ Backend tracking server error.";
                 }
@@ -1754,7 +1766,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-       // 3. The Ultimate Translation Override (Cookie Method)
         function changeLanguage(langCode) {
             localStorage.setItem("preferredLanguage", langCode);
             document.cookie = "googtrans=/en/" + langCode + "; path=/";
