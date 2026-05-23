@@ -1714,93 +1714,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl = document.getElementById("status-message");
     if (statusEl) statusEl.innerText = "⏳ Gathering Location...";
 
+    // 1. Process the optional photo/video upload first
+    let finalMediaUrl = "No media attached";
+    const fileInput = document.querySelector('input[type="file"]');
+    if (fileInput && fileInput.files.length > 0) {
+        const file = fileInput.files[0];
+        finalMediaUrl = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onloadend = () => resolve(reader.result);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+
+    // 2. Get GPS Location
     navigator.geolocation.getCurrentPosition(async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+        const mapsLink = `http://maps.google.com/?q=${lat},${lon}`;
+        const emergencyMessage = `🚨 EMERGENCY SOS! I need help. Location: ${mapsLink}`;
 
+        // 3. Try to update your Campus Dashboard
         try {
-            await fetch('https://disaster-api-af2w.onrender.com', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentName: "student@college.edu",
-                    latitude: lat,
-                    longitude: lon,
-                    timestamp: new Date().toISOString()
-                })
-            });
-        } catch (e) { console.log("Dashboard offline"); }
+            const backendData = new FormData();
+            backendData.append("studentId", activeUserEmail);
+            backendData.append("latitude", lat);
+            backendData.append("longitude", lon);
+            backendData.append("time", new Date().toLocaleString());
+            backendData.append("mediaUrl", finalMediaUrl); 
 
-        const smsUrl = `sms:8777393307?body=SOS! My location: ${lat}, ${lon}`;
-        window.open(smsUrl, '_self');
-    }, () => {
-        window.open("sms:8777393307?body=SOS! Emergency assistance needed.", "_self");
-    }, { timeout: 5000 });
+            await fetch('https://disaster-api-af2w.onrender.com/api/trigger-sos', {
+                method: 'POST',
+                body: backendData
+            });
+            if (statusEl) statusEl.innerText = "✅ SOS Sent to Dashboard!";
+        } catch (error) { 
+            console.log("Dashboard offline, relying on SMS."); 
+        }
+
+        // 4. ALWAYS trigger the SMS failover
+        window.location.href = `sms:8777393307?body=${encodeURIComponent(emergencyMessage)}`;
+        
+    }, (error) => {
+        // Fallback if GPS is blocked or fails
+        console.error("GPS Error:", error);
+        window.location.href = "sms:8777393307?body=SOS! I need help and my location is unavailable.";
+    }, options);
 }
-
-            if (fileInput && fileInput.files.length > 0) {
-                const file = fileInput.files[0];
-                const base64 = await new Promise((resolve) => {
-                    const reader = new FileReader();
-                    reader.onloadend = () => resolve(reader.result);
-                    reader.readAsDataURL(file);
-                });
-                finalMediaUrl = base64;
-            }
-
-            try {
-                const position = await new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject);
-                });
-
-                const lat = position.coords.latitude;
-                const lon = position.coords.longitude;
-
-                
-                const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
-                const emergencyMessage = `🚨 EMERGENCY SOS! I need help. My live location is: ${mapsLink}`;
-        try {
-            await fetch('https://disaster-api-af2w.onrender.com', {  
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    studentName: "student@college.edu",
-                    latitude: lat,
-                    longitude: lon,
-                    timestamp: new Date().toISOString()
-                })
-            });
-            console.log("Dashboard Updated Successfully");
-        } catch (error) {
-            console.log("Offline: Bypassing dashboard.");
-        }
-                const smsUrl = `sms:8777393307?body=${encodeURIComponent(emergencyMessage)}`;
-                window.open(smsUrl, '_self');
-
-                if (statusEl) statusEl.innerText = "⏳ Sending to Campus Dashboard...";
-
-                const backendData = new FormData();
-                backendData.append("studentId", activeUserEmail);
-                backendData.append("latitude", lat);
-                backendData.append("longitude", lon);
-                backendData.append("time", new Date().toLocaleString());
-                backendData.append("mediaUrl", finalMediaUrl || "No media uploaded"); 
-
-                const response = await fetch('https://disaster-api-af2w.onrender.com/api/trigger-sos', {
-                    method: 'POST',
-                    body: backendData
-                });
-
-                if (response.ok) {
-                    if (statusEl) statusEl.innerText = "✅ SOS Sent & Dashboard Updated!";
-                } else {
-                    if (statusEl) statusEl.innerText = "❌ Backend tracking server error.";
-                }
-            } catch (error) {
-                console.error("SOS Alert failed:", error);
-                if (statusEl) statusEl.innerText = "❌ SOS failed. Please check location permissions.";
-            }
-        }
 
         function changeLanguage(langCode) {
             localStorage.setItem("preferredLanguage", langCode);
