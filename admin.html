@@ -94,8 +94,7 @@
                         if (alert.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) || alert.mediaUrl.includes("/video/")) {
                             mediaContent = `<video src="${alert.mediaUrl}" controls class="w-32 h-20 object-cover rounded-md border border-slate-600 bg-black shadow-sm"></video>`;
                         } else {
-                            mediaContent = `<a href="${alert.mediaUrl}" target="_blank"><img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200"></a>`;
-                        }
+                          mediaContent = `<a href="${alert.mediaUrl}" download="Emergency_Proof"><img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200"></a>`;                        }
                     }
 
                     const row = `
@@ -136,14 +135,6 @@
             }
         });
     </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker Registered!', reg))
-                    .catch(err => console.error('Service Worker Registration Failed!', err));
-            });
-        }
-    </script>
+    
 </body>
 </html>
