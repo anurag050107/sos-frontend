@@ -43,17 +43,12 @@
             background-color: transparent !important;
             box-shadow: none !important;
         }
-<<<<<<< HEAD
-        /* Hide original translate elements that are not our picker */
-=======
->>>>>>> 6e0fbf4e97f15d2335064d11182ec5a90b48df40
         .skiptranslate:not(#select-language) {
             display: none !important;
         }
     </style>
 
-    <!-- Hidden Google Translate Element -->
-    <div id="google_translate_element" style="display:none !important;"></div>
+<div id="google_translate_element" style="position: absolute; left: -9999px; z-index: -9999;"></div>
     <script>
         function googleTranslateElementInit() {
             new google.translate.TranslateElement({
@@ -64,7 +59,7 @@
             }, 'google_translate_element');
         }
     </script>
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>   
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
 
@@ -102,12 +97,8 @@
             <a href="#Quiz" class="hover:text-red-600">Quiz</a>
             <a href="#sos" class="bg-red-600 text-white px-4 py-2 rounded-lg">Emergency SOS</a>
             
-<<<<<<< HEAD
             <!-- Language Selector -->
              <div id="select-language" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
-=======
-            <div id="select-language" class="notranslate flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
->>>>>>> 6e0fbf4e97f15d2335064d11182ec5a90b48df40
                 <span class="text-base leading-none">🌐</span>
                 <select id="language-picker" onchange="changeLanguage(this.value)" class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
                     <option value="en">English</option>
