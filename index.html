@@ -1716,6 +1716,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
             let finalMediaUrl = "";
             const fileInput = document.querySelector('input[type="file"]');
+            navigator.geolocation.getCurrentPosition((position) => {
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        const smsUrl = `sms:8777393307?body=SOS! My location: ${lat}, ${lon}`;
+        window.open(smsUrl, '_self');
+    }, () => {
+        window.open("sms:8777393307?body=SOS! Emergency assistance needed.", "_self");
+    }, { timeout: 5000 });
+}
 
             if (fileInput && fileInput.files.length > 0) {
                 const file = fileInput.files[0];
