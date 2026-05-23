@@ -1711,14 +1711,26 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         async function sendAlert() {
-            const statusEl = document.getElementById("status-message");
-            if (statusEl) statusEl.innerText = "⏳ Gathering Location...";
+    const statusEl = document.getElementById("status-message");
+    if (statusEl) statusEl.innerText = "⏳ Gathering Location...";
 
-            let finalMediaUrl = "";
-            const fileInput = document.querySelector('input[type="file"]');
-            navigator.geolocation.getCurrentPosition((position) => {
+    navigator.geolocation.getCurrentPosition(async (position) => {
         const lat = position.coords.latitude;
         const lon = position.coords.longitude;
+
+        try {
+            await fetch('https://disaster-api-af2w.onrender.com', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentName: "student@college.edu",
+                    latitude: lat,
+                    longitude: lon,
+                    timestamp: new Date().toISOString()
+                })
+            });
+        } catch (e) { console.log("Dashboard offline"); }
+
         const smsUrl = `sms:8777393307?body=SOS! My location: ${lat}, ${lon}`;
         window.open(smsUrl, '_self');
     }, () => {
