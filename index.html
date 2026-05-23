@@ -1751,9 +1751,8 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (error) {
             console.log("Offline: Bypassing dashboard.");
         }
-                const whatsappUrl = `https://wa.me/8777393307?text=${encodeURIComponent(emergencyMessage)}`;
-                window.open(whatsappUrl, '_blank'); 
-
+                const smsUrl = `sms:8777393307?body=${encodeURIComponent(emergencyMessage)}`;
+                window.open(smsUrl, '_self');
 
                 if (statusEl) statusEl.innerText = "⏳ Sending to Campus Dashboard...";
 
