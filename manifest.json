@@ -1,13 +1,19 @@
 {
   "name": "ResilientCampus SOS",
-  "short_name": "Campus SOS",
-  "start_url": "/index.html",
+  "short_name": "SOS Alert",
+  "description": "Campus Disaster SOS Alert System",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",
-  "theme_color": "#ef4444",
+  "theme_color": "#dc2626",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/3050/3050417.png",
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
