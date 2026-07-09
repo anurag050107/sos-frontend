@@ -428,8 +428,7 @@
 
     let allAlerts = [];
 
-    // Show API URL in debug bar
-    document.getElementById("dbgApi").textContent = API;
+    
 
     // =============================================
     // Safe fetch with timeout
@@ -676,9 +675,14 @@
     // =============================================
     // INIT
     // =============================================
-    console.log("Admin init — API:", API);
+        console.log("Admin init — API:", API);
     console.log("Endpoints:", ENDPOINTS);
-    loadData();
+    
+    if (document.getElementById("tableBody")) {
+        loadData();
+    } else {
+        console.error("FATAL: tableBody not found. Admin HTML is missing the table structure.");
+    }
   </script>
 </body>
 </html>
