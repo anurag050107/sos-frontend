@@ -20,22 +20,18 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* This makes the SOS button pulse like a heartbeat */
         @keyframes pulse {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7); }
             70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(220, 38, 38, 0); }
             100% { transform: scale(1); }
         }
         .sos-pulse { animation: pulse 2s infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Hide Google Translate top bar and banner elements to keep UI premium */
         .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame {
             display: none !important;
         }
-        body {
-            top: 0px !important;
-        }
-        /* Hide translation tooltips */
+        body { top: 0px !important; }
         #goog-gt-tt, .goog-te-balloon-frame, .goog-te-tooltip, .goog-te-tooltip-text {
             display: none !important;
         }
@@ -45,6 +41,60 @@
         }
         .skiptranslate:not(#select-language) {
             display: none !important;
+        }
+
+        /* Toast */
+        @keyframes toastIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        .toast-in { animation: toastIn 0.3s ease forwards; }
+        .toast-out { animation: toastOut 0.3s ease forwards; }
+
+        /* Photo preview */
+        .photo-preview-container {
+            position: relative;
+            display: inline-block;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e2e8f0;
+            max-width: 280px;
+        }
+        .photo-preview-container img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+        .photo-preview-container .remove-photo {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .photo-preview-container .remove-photo:hover { background: #dc2626; }
+
+        /* Progress bar under photo */
+        .upload-progress-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: #e2e8f0;
+        }
+        .upload-progress-bar .fill {
+            height: 100%;
+            background: #dc2626;
+            width: 0%;
+            transition: width 0.3s;
         }
     </style>
 
@@ -63,22 +113,18 @@
 </head>
 <body class="bg-slate-50 text-slate-900 font-sans">
 
+    <!-- TOAST CONTAINER -->
+    <div id="toastContainer" class="fixed top-4 right-4 z-[9999] flex flex-col gap-2 max-w-sm w-full pointer-events-none"></div>
+
     <div id="google_translate_element" style="position: absolute; left: -9999px; z-index: -9999;"></div>
     <script>
-       // 3. Language Selector Functions (The Bulletproof Cookie Method)
         function changeLanguage(langCode) {
-            // Write the translation command directly to the browser's memory
             document.cookie = "googtrans=/en/" + langCode + "; path=/";
             document.cookie = "googtrans=/en/" + langCode + "; domain=" + window.location.hostname + "; path=/";
-            
-            // Save the user's choice
             localStorage.setItem("preferredLanguage", langCode);
-            
-            // Force a quick reload so Google reads the cookie instantly
             window.location.reload();
         }
 
-        // Keep the dropdown showing the correct language after reload
         document.addEventListener("DOMContentLoaded", () => {
             const savedLang = localStorage.getItem("preferredLanguage") || "en";
             const languagePicker = document.getElementById("language-picker");
@@ -99,7 +145,6 @@
             <button id="installAppBtn" style="display: none;" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 ml-2">
               📲 Download App
             </button>
-            <!-- Language Selector -->
              <div id="select-language" class="flex items-center space-x-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-200 transition-colors cursor-pointer">
                 <span class="text-base leading-none">🌐</span>
                 <select id="language-picker" onchange="changeLanguage(this.value)" class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
@@ -129,13 +174,29 @@
         <button onclick="sendAlert()" id="sosBtn" class="sos-pulse bg-red-600 hover:bg-red-700 text-white w-40 h-40 rounded-full text-3xl font-black shadow-xl transition-all active:scale-95">
             SOS
         </button>
-        <div class="mt-4 text-center">
-    <label class="block mb-2 text-sm font-medium text-slate-700 font-semibold">
-        📸 Optional: Capture/Attach Photo or Video Proof
-    </label>
-    <input type="file" id="mediaProof" accept="image/*,video/*" capture="environment" 
-           class="block w-full max-w-xs mx-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer">
-</div>
+
+        <div class="mt-6 text-center">
+            <label class="block mb-2 text-sm font-medium text-slate-700 font-semibold">
+                📸 Optional: Capture/Attach Photo or Video Proof
+            </label>
+
+            <!-- Upload area: default state -->
+            <div id="uploadArea">
+                <input type="file" id="mediaProof" accept="image/*,video/*" capture="environment" 
+                       class="block w-full max-w-xs mx-auto text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-red-50 file:text-red-700 hover:file:bg-red-100 cursor-pointer"
+                       onchange="handlePhotoSelect(event)">
+            </div>
+
+            <!-- Preview: hidden by default -->
+            <div id="photoPreview" class="hidden mt-3 flex flex-col items-center">
+                <div class="photo-preview-container">
+                    <img id="previewImg" src="" alt="Preview">
+                    <button type="button" class="remove-photo" onclick="removePhoto()">✕</button>
+                    <div class="upload-progress-bar" id="progressBar"><div class="fill" id="progressFill"></div></div>
+                </div>
+                <p class="text-xs text-slate-400 mt-1" id="photoStatus">Ready to upload</p>
+            </div>
+        </div>
         
         <p id="status-message" class="mt-6 font-semibold text-slate-500"></p>
     </section>
@@ -149,91 +210,67 @@
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🏢</div>
                 <h3 class="font-bold text-lg">Earthquake</h3>
-                
                 <p class="font-extrabold text-sm text-slate-500 mt-2">Here are the top 5 precautions for an earthquake in simple lines-</p>
-
-<p class="text-sm text-slate-500 mt-2">1. Drop, Cover, and Hold On during the shaking.</p>
-
-
-<p class="text-sm text-slate-500 mt-2">2. Stay away from windows, glass, and heavy objects.</p>
-
-
-<p class="text-sm text-slate-500 mt-2">3. Keep emergency supplies ready (water, food, first-aid, torch).</P>
-
-
-<p class="text-sm text-slate-500 mt-2">4. Secure heavy furniture to walls to prevent falling.</p>
-
-
-<p class="text-sm text-slate-500 mt-2">5. Move to an open area if you are outside, away from buildings and trees.</p>
-            <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/BLEPakj1YTY?si=dqA41LAIPBPvJS16>https://youtu.be/BLEPakj1YTY?si=dqA41LAIPBPvJS16</a>
+                <p class="text-sm text-slate-500 mt-2">1. Drop, Cover, and Hold On during the shaking.</p>
+                <p class="text-sm text-slate-500 mt-2">2. Stay away from windows, glass, and heavy objects.</p>
+                <p class="text-sm text-slate-500 mt-2">3. Keep emergency supplies ready (water, food, first-aid, torch).</p>
+                <p class="text-sm text-slate-500 mt-2">4. Secure heavy furniture to walls to prevent falling.</p>
+                <p class="text-sm text-slate-500 mt-2">5. Move to an open area if you are outside, away from buildings and trees.</p>
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/BLEPakj1YTY?si=dqA41LAIPBPvJS16" target="_blank">Watch Video →</a>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🔥</div>
-   
                 <h3 class="font-bold text-lg">Fire Safety</h3>
-                
                 <p class="font-extrabold text-sm text-slate-500 mt-2">How To use A fire extinguisher-</p>
                 <p class="text-sm text-slate-500 mt-2">1. Pull the safety pin to unlock the extinguisher.</p>
                 <p class="text-sm text-slate-500 mt-2">2. Aim the nozzle at the base of the fire (not the flames).</p>
                 <p class="text-sm text-slate-500 mt-2">3. Squeeze the handle to release the extinguishing agent.</p>
-                <p class="text-sm text-slate-500 mt-2">Check if the fire is out and be ready to repeat if needed.</p>
-                <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/UlKS_A7Xg1E?si=ed_mQygVHnCOQn2U>https://youtu.be/UlKS_A7Xg1E?si=ed_mQygVHnCOQn2U</a>
-                
-                <p class="text-sm text-slate-500 mt-2"></p>
-                <p class="text-sm text-slate-500 mt-2"></p>
-                
+                <p class="text-sm text-slate-500 mt-2">4. Check if the fire is out and be ready to repeat if needed.</p>
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/UlKS_A7Xg1E?si=ed_mQygVHnCOQn2U" target="_blank">Watch Video →</a>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🌀</div>
                 <h3 class="font-bold text-lg">Cyclone/Flood</h3>
-                
-                <p class="font-extrabold text-sm text-slate-500 mt-2">How to be safe during Cyclone - </p>
-                <p class="text-sm text-slate-500 mt-2">1.Stay indoors and away from windows during a cyclone.</p>
-                <p class="text-sm text-slate-500 mt-2">2.Keep emergency supplies like food, water, and a flashlight ready</p>
-                <p class="text-sm text-slate-500 mt-2">3.Don't go for fish catching or swimming</p>
-                <p class="text-sm text-slate-500 mt-2">4.Follow official warnings and evacuate if advised.</p>
-                <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/XK2pKDzNcHE?si=_eaErpTHaIkYYzDC>https://youtu.be/XK2pKDzNcHE?si=_eaErpTHaIkYYzDC</a>
+                <p class="font-extrabold text-sm text-slate-500 mt-2">How to be safe during Cyclone -</p>
+                <p class="text-sm text-slate-500 mt-2">1. Stay indoors and away from windows during a cyclone.</p>
+                <p class="text-sm text-slate-500 mt-2">2. Keep emergency supplies like food, water, and a flashlight ready.</p>
+                <p class="text-sm text-slate-500 mt-2">3. Don't go for fish catching or swimming.</p>
+                <p class="text-sm text-slate-500 mt-2">4. Follow official warnings and evacuate if advised.</p>
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/XK2pKDzNcHE?si=_eaErpTHaIkYYzDC" target="_blank">Watch Video →</a>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🚵</div>
                 <h3 class="font-extrabold text-lg">Landslide</h3>
-               
-                <p class="font-bold text-sm text-slate-500 mt-2 ">What to do during landslide-</p>
-                <p class="text-sm text-slate-500 mt-2">1.Avoid living or traveling in landslide-prone areas, especially during heavy rain.</p>
-                <p class="text-sm text-slate-500 mt-2">2.Stay alert for warning signs like cracks in the ground or falling rocks.</p>
-                <p class="text-sm text-slate-500 mt-2">3.Move to a safe, higher place and follow evacuation instructions if a landslide is likely.</p>
-                <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/LnrodvOG16U?si=mO-QuaLfXjH6RH1D>https://youtu.be/LnrodvOG16U?si=mO-QuaLfXjH6RH1D</a>
-            
-              </div>
+                <p class="font-bold text-sm text-slate-500 mt-2">What to do during landslide-</p>
+                <p class="text-sm text-slate-500 mt-2">1. Avoid living or traveling in landslide-prone areas, especially during heavy rain.</p>
+                <p class="text-sm text-slate-500 mt-2">2. Stay alert for warning signs like cracks in the ground or falling rocks.</p>
+                <p class="text-sm text-slate-500 mt-2">3. Move to a safe, higher place and follow evacuation instructions if a landslide is likely.</p>
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/LnrodvOG16U?si=mO-QuaLfXjH6RH1D" target="_blank">Watch Video →</a>
+            </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🌲</div>
                 <h3 class="font-bold text-lg">Forest Fire</h3>
-                 
                 <p class="font-extrabold text-sm text-slate-500 mt-2">Understanding perimeter safety and smoke inhalation protection-</p>
                 <p class="text-sm text-slate-500 mt-2">1. Avoid lighting fires in forests and never leave flames or cigarettes unattended.</p>
                 <p class="text-sm text-slate-500 mt-2">2. If a fire starts, move away quickly in the opposite direction of the wind to a safe, open area.</p>
                 <p class="text-sm text-slate-500 mt-2">3. Cover your nose and mouth with a cloth and follow evacuation instructions to stay safe.</p>
-                <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/DSD4j-gC34E?si=m-HSdD98N_KPMb4L>https://youtu.be/DSD4j-gC34E?si=m-HSdD98N_KPMb4L</a>
-                
-               
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/DSD4j-gC34E?si=m-HSdD98N_KPMb4L" target="_blank">Watch Video →</a>
             </div>
 
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <div class="text-4xl mb-4">🤒</div>
                 <h3 class="font-bold text-lg">Heatwave</h3>
-                
                 <p class="font-extrabold text-sm text-slate-500 mt-2">Hydration protocols and identifying signs of heat exhaustion-</p>
-                <p class="text-sm text-slate-500 mt-2">1.Drink plenty of water and stay hydrated.</p>
-                <p class="text-sm text-slate-500 mt-2">2.Stay indoors in a cool or shaded place as much as possible. </p>
-                <p class="text-sm text-slate-500 mt-2">3.Avoid going out during peak heat hours (12 PM to 4 PM)</p>
-                <a class="mt-4 text-red-600 font-bold text-sm" href=https://youtu.be/BvPD7ESnGps?si=8OONRjNjBWG5WFqB>https://youtu.be/BvPD7ESnGps?si=8OONRjNjBWG5WFqB</a>
-                
-            
-           </div>
+                <p class="text-sm text-slate-500 mt-2">1. Drink plenty of water and stay hydrated.</p>
+                <p class="text-sm text-slate-500 mt-2">2. Stay indoors in a cool or shaded place as much as possible.</p>
+                <p class="text-sm text-slate-500 mt-2">3. Avoid going out during peak heat hours (12 PM to 4 PM).</p>
+                <a class="mt-4 text-red-600 font-bold text-sm" href="https://youtu.be/BvPD7ESnGps?si=8OONRjNjBWG5WFqB" target="_blank">Watch Video →</a>
+            </div>
+        </div>
     </section>
 
     <hr class="border-slate-200">
@@ -241,1590 +278,690 @@
     <section id="news" class="py-16 px-4 max-w-5xl mx-auto">
         <h2 class="text-2xl font-bold mb-8">Recent News Across India</h2>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Earthquake Updates</h3>
                 <p class="text-sm text-slate-500 mt-2">Monitoring seismic activity in Northern India and the Himalayan belt.</p>
-                <a href="https://m.emsc.eu/?urif=%2F"  target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://m.emsc.eu/" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Heatwave Alerts</h3>
                 <p class="text-sm text-slate-500 mt-2">IMD issues orange alerts for several states as temperatures soar.</p>
-                <a href="https://zoom.earth/maps/temperature" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://zoom.earth/maps/temperature" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Cyclone Tracking</h3>
                 <p class="text-sm text-slate-500 mt-2">Low-pressure systems forming in the Bay of Bengal being monitored.</p>
-                <a href="https://zoom.earth/maps/satellite/#view=26.68,80.61,5z"  target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://zoom.earth/maps/satellite/#view=26.68,80.61,5z" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Flood Warnings</h3>
                 <p class="text-sm text-slate-500 mt-2">River water levels reaching danger marks in monsoon-prone regions.</p>
-                <a href="https://floodlist.com/" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://floodlist.com/" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Landslide Alerts</h3>
                 <p class="text-sm text-slate-500 mt-2">Hill stations advised caution during heavy rainfall periods.</p>
-                <a href="https://svs.gsfc.nasa.gov/4632" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://svs.gsfc.nasa.gov/4632" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
             <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 hover:border-red-200 transition-colors">
                 <h3 class="font-bold text-lg">Forest Fire Prevention</h3>
                 <p class="text-sm text-slate-500 mt-2">New satellite monitoring systems deployed for early detection.</p>
-                <a href="https://gwis.jrc.ec.europa.eu/"  target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">
-                    To Know More →
-                </a>
+                <a href="https://gwis.jrc.ec.europa.eu/" target="_blank" class="inline-block mt-4 bg-slate-100 hover:bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-bold transition-colors">To Know More →</a>
             </div>
-
         </div>
-         </section>
+    </section>
 
     <hr class="border-slate-200">
 
     <section id="Quiz" class="py-16 px-4 max-w-5xl mx-auto">
-        <h3 class="text-2xl font-bold mb-8">Awareness Interactive Quiz </h3>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+        <h3 class="text-2xl font-bold mb-8">Awareness Interactive Quiz</h3>
           
-          <div class="quiz-container">
-            <script>
-document.addEventListener('DOMContentLoaded', () => {
-    // Select all radio inputs
-    const options = document.querySelectorAll('input[type="radio"]');
-
-    options.forEach(option => {
-        option.addEventListener('change', function() {
-            // Find the parent question block
-            const questionBlock = this.closest('.question-block');
-            
-            // Remove existing highlight classes from all labels in this block
-            const allLabels = questionBlock.querySelectorAll('.option');
-            allLabels.forEach(label => {
-                label.classList.remove('bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'border-red-500', 'border-green-500');
-                label.classList.add('border-transparent');
+        <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const options = document.querySelectorAll('input[type="radio"]');
+            options.forEach(option => {
+                option.addEventListener('change', function() {
+                    const questionBlock = this.closest('.question-block');
+                    const allLabels = questionBlock.querySelectorAll('.option');
+                    allLabels.forEach(label => {
+                        label.classList.remove('bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800', 'border-red-500', 'border-green-500');
+                        label.classList.add('border-transparent');
+                    });
+                    const parentLabel = this.parentElement;
+                    if (this.classList.contains('correct')) {
+                        parentLabel.classList.add('bg-green-100', 'text-green-800', 'border-green-500', 'border-2', 'rounded-md', 'p-1');
+                    } else {
+                        parentLabel.classList.add('bg-red-100', 'text-red-800', 'border-red-500', 'border-2', 'rounded-md', 'p-1');
+                    }
+                    const feedback = questionBlock.querySelector('.feedbackcorrected-msg, .feedback');
+                    if (feedback) {
+                        feedback.classList.remove('hidden');
+                        feedback.classList.add('block', 'mt-2', 'text-blue-700');
+                    }
+                });
             });
-
-            // Get the label of the clicked input
-            const parentLabel = this.parentElement;
-
-            if (this.classList.contains('correct')) {
-                // Style for Correct answer
-                parentLabel.classList.add('bg-green-100', 'text-green-800', 'border-green-500', 'border-2', 'rounded-md', 'p-1');
-            } else {
-                // Style for Wrong answer
-                parentLabel.classList.add('bg-red-100', 'text-red-800', 'border-red-500', 'border-2', 'rounded-md', 'p-1');
-            }
-
-            // Show the feedback/hint message once an answer is picked
-            const feedback = questionBlock.querySelector('.feedbackcorrected-msg, .feedback');
-            if (feedback) {
-                feedback.classList.remove('hidden');
-                feedback.classList.add('block', 'mt-2', 'text-blue-700');
-            }
         });
-    });
-});
-</script>
+        </script>
         
-<div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: EARTHQUAKE</h2>
-  <div class="question-block">
-    <p class="font-bold question">1.What are the 19 to 20 pieces of the Earth's surface that move on the molten mantle called?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q1" class="wrong"> A. Mantle fragment </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong"> B. Lithospheric blocks
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong"> C. Seismic Slab
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="correct"> D. Tectonic Plate
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Earth's surface is composed of these large plates that continuously shift, causing seismic activity.</div>
-   
-  </div><br>
-
-  <div class="question-block">
-    <p class="font-bold question ">2. Which term describes the exact point underground where an earthquake originates?</p>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">A.Focus zone
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="correct">B.Hypocenter 
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="Wrong">C.Epicenter
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="Wrong">D.Litho-point
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">It starts with 'hypo-', which often refers to something being 'under' or 'below</div>
-    
-  </div><br>
-  
-  <div class="question-block">
-    <p class="font-bold question">3.Which type of seismic waves are the most destructive to buildings and life?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q3" class="wrong"> A.Body waves </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="correct"> B.Surface waves
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="wrong"> C.Primary waves 
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="wrong"> D.Secondary waves
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Consider which waves travel specifically along the Earth's crust where structures are built.</div>
-   
-  </div><br>
-  
-  <div class="question-block">
-    <p class="font-bold question">4.According to the Richter scale, what magnitude range is classified as a 'strong' earthquake?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q4" class="wrong"> A. 5.0 to 5.9
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="correct"> B. 6.0 to 6.9
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong"> C. 4.0 to 4.9
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong"> D. above 7.0 
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">This range sits between moderate and major earthquakes.</div>
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">5.What unusual environmental change might help scientists predict an earthquake up to seven days in advance?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q5" class="wrong"> A. Rapid change in weather
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="wrong"> B. Sudden imigration of birds
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="correct"> C. Increase in tadon Gas
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="wrong"> D. sudden drop in sea level
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Look for the mention of specific radioactive gases released from the Earth's crust.</div>
-   
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">6.If you are indoors during an earthquake, where is the safest place to take shelter?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q6" class="correct"> A. under a sturdy table
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong"> B. near a large window
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong"> C. In a elevator
-      </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong"> D. In the middle of the room
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Think about protecting yourself from things that might fall from the ceiling or walls.</div>
-   
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">7.What should you do if you are driving when an earthquake starts?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q7" class="wrong"> A. Exit the car and lie down on the road
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="correct"> B. Pull over a safety spot and stay inside car
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="wrong"> C. Speed up and go home faster
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="wrong"> D. Stop immediately even in the middle of bridge
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Focus on finding a safe distance from falling objects and remaining in your current enclosure.</div>
-   
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">8. Why is it important to turn off gas and water taps after the shaking stops?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q8" class="wrong"> A. To signal that you are safe
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="wrong"> B. To save money on bills
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="correct"> C. To prevent leaks, explosion, or flooding
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="wrong"> D. Because the city will shut them anyway
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Consider the secondary disasters (like fires) that can happen when infrastructure is damaged.</div>
-   
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">9.If you are in a coastal area and feel a strong earthquake, what secondary danger should you move away from?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q9" class="wrong"> A. Strong winds 
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="wrong"> B. Volcanic eruptions
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="correct"> C. Tsumamis
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="wrong"> D. Forest fires
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Think about large waves triggered by underwater seismic activity.</div>
-   
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question">10.Which of these is a recommended way to prepare your home for a future earthquake?</p>
-    
-    <label class="option"></label>
-    <input type="radio" name="q10" class="wrong"> A. Leaving the doors and window open at all the time  
-    </p>
-    </label>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="correct"> B. Securing heavy furniture and decives to the wall 
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="wrong"> C. Storing all heavy items on high shelves
-    </label></p>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="wrong"> D. Removing all sturdy furniture from the house 
-    </label></p>
-    <div class="font-medium hint">Hint :</div>
-    
-
-    <div class="font-semibold feedback correct-msg">Focus on the action that prevents heavy objects from tipping over during vibrations.</div>
-   
-  </div><br>
-  <div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: CYCLONE</h2>
-  <div class="question-block">
-    <p class="font-bold question ">1.What are the huge sea waves generated by a cyclone that cause large-scale destruction in coastal areas called?</p>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">A.Flash flood
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="correct">B.Strom surge
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="Wrong">C.Tidal waves
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="Wrong">D.Tsunami
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">The term starts with 'Storm' and refers to a sudden rise in water level.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">2.Which of these is a safety measure that the government should implement for people in cyclone-prone areas? </p>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">A.Telling peopleto ignore official warnings
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">B.Encouraging people to stay in old buildings
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="Wrong">C.Distributing rumors to keep people alert
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="correct">D.Establishing forecast management systems
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about the system used to predict weather events before they happen.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">3. What is the primary purpose of a 'risk map' as described in the video?</p>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">A.To identify hidden teasures along the coast
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="correct">B.To estimate the extent ofdestruction to life and infrastructure
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q3" class="Wrong">C.To track the movement of animals in the forest
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q3" class="Wrong">D.To find the best places for vacation
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">It relates to 'estimating' the potential impact of the disaster.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">4.When a cyclone warning is issued, what should individuals do to prepare their important documents? </p>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">A.Leave them in a safe box on the floor
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">B.Hide them under furniture
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">C.Keep them near an open window for easy acess
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q4" class="correct">D.Place them in waterproof packets orcontainers
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Focus on the type of protection needed against water and moisture.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">5.Why is it important to secure sharp objects or not leave them loose outside before a cyclone? </p>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">A.Because they might block the drainage system
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">B.Because they might get rusty
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q5" class="correct">C.Because heavy wwinds can turn them into dangerous projectiles
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">D.Because they might be stolen during the strom
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about what happens to loose items when winds become extremely fast.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">6. What is the recommended action regarding household power and gas connections during a cyclone?</p>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">A.Leave the gas on for cooking purposes
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">B.Keep them on to stay connected to the internet
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">C.Only turn them off if you see water entering the house
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q6" class="correct">D.Switch off electrical equipment and close gas connections
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">It involves a standard safety 'switch' and 'closure' procedure.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">7.What should you do if you believe your house will not withstand the 'fiery winds' of the cyclone?</p>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="correct">A.Leave before the onset of the cyclone
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">B.Climb onto the roof to avoid flooding
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">C.Hide under a wooden table
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">D.Stay in the basement and hope for the best
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">The advice is focused on getting to a safe place before the storm begins.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">8.Why does the video advise drinking only boiled or chlorinated water during and after a cyclone?</p>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">A.To improve the taste of the water
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="correct">B.To avoid waterborne diseases 
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">C.Because cold water is bad forthe throat
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">D.To keep the water warm in cold weather
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about what happens to water quality when floods and sewage systems mix.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">9.What is an important safety rule to follow after the cyclone has passed?</p>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">A.Go to the beach to see the waves
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">B.Start driving your car immediately to survey the area
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">C.Immediately enter damaged buildings to check for items
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q9" class="correct">D.Watch out for broken electric poles and wires
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Consider the hazards left behind by high winds and falling trees.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">10.According to the video, what is the ultimate goal of following these safety measures?</p>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="correct">A.To mitigate the loss of life and property
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">B.To change the direction
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">C.To stop the cyclone from hitting the land 
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">D.To make the government work harder
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Focus on the word that means to 'reduce' or 'lessen' the severity of something.</div>
-    
-  </div><br>
-  <div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: FLOODS</h2>
-  <div class="question-block">
-    <p class="font-bold question ">1.According to the video, why is it incorrect to assume you are safe from floods just because they haven't happened in your area before?</p>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">A.Topography never changes over time
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">B.Flood control measures are always 100% effective
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">C.Flood history is the only factor scientists use to predict risks
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="correct">D.Anywhere it rains,it can flood 
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about the simplest condition required for a flood to occur.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">2.What is a recommended preventive action to take regarding household waste before heavy rains start?</p>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">A.Bury waste in the backyard to act as a barrier
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q2" class="correct">B.Remove plastic bags and bottles from drains
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">C.Keep all waste in plastic bags inside the house
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">D.Burn plastic waste in the garden
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Focus on keeping the paths where water flows clear of obstructions.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">3.What should you do immediately if flash flooding occurs in your area?</p>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">A.Try to build a barrier around your house.
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">B.Wait for official government instructions to move
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q3" class="correct">C.Move immediately to higher ground.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">D.Stays in your basement until the rain stops.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Flash floods are characterized by their extreme speed and suddenness.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">4.Why is it dangerous to touch electrical equipment or wires during a flood if you are wet?</p>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">A.Wet hands might slip off the switch
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">B.It will cause a power outage for the whole neighborhood. 
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q4" class="correct">C.Water conducts electricity,posing a risk of electrocution.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">D.The equipment might get damaged.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Consider the relationship between water and electricity.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">5.How much moving flood water is typically enough to carry away a car?</p>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">A.0.1 meters
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q5" class="correct">B.0.5 meters
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q5" class="Wrong">C.5.0 meters
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q5" class="Wrong">D.2.0 meters
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">It is a relatively small amount, about the height of a car's tire.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">6.What is the specific danger mentioned about walking in shallow, fast-moving water?</p>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">A.It might contain fish that can bite.
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">B.It can ruin your shoes.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">C.It will always be freezing cold.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q6" class="correct">D.Just 6 inches(about 15 cm) of moving water can knock you off your feet.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">The danger is related to the force of the water on your body.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">7.Why should you avoid eating food that has come into contact with flood water?</p>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">A.The food will be too soggy to enjoy.
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">B.The food might be too cold to eat
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">C.Flood water removes all the nutrients from the food.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q7" class="coorect">D.Flood water is often contaminated with sewage,chemicals,and oil.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about what else mixes into the water when streets and sewers overflow.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">8.After a flood, when is it considered safe to return to your home?</p>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">A.Once the power has been restored to the area.
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q8" class="correct">B.Only when local authorities advise it is safe.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">C.When you see your neighbours returning.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">D.As soon as the rain stops.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Safety depends on the expert assessment of structural and environmental risks.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">9.What should you do before reconnecting your power supply after a flood has affected your house?</p>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="correct">A.Have a qualified engineer or electrician check the system 
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q9" class="wrogn">B.Dry the main switch with a towel
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">C.Wait exactly 24 hours after the water recedes.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">D.Check if the lights work by turning them on briefly.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">This task requires professional expertise to ensure the system is safe.</div>
-    
-  </div><br>
-  <div class="question-block">
-    <p class="font-bold question ">10.Why should you use 'extreme caution' when entering a building after a flood has receded?</p>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">A.The air inside will be too humid.
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">B.The floor might be dirty.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q10" class="correct">C.There may be hidden damage to the foundations.
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">D.You might trip over your own furniture.
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about the part of the building that is underground and most affected by water saturation.</div>
-    
-</div></br>
-<div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: HEAT WAVES</h2>
-</div>
- <div class="question-block">
-    <p class="font-bold question ">1.What are the two factors combined to measure the 'heat index'?</p>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">A.Air Pressure
-    </label></P>
-    
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">B.UV index and cloud cover
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">C.direct sunlight and surface temperature
-    </label></P>
-    <label class="option">
-      <input type="radio" name="q1" class="correct">D.Relative humidity and air temperature
-    </label></P>
-    <div class="font-medium hint">Hint:</div>
-
-    <div class="font-semibold feedback correct-msg">Think about the 'wetness' of the air and the actual degres on the thermometer.</div>
-    
-    
-  <div class="question-block">
-    <p class="font-bold question">2.At what heat index level is an 'excessive heat warning' typically issued?</p>
-        <label class="option">
-            <input type="radio" name="q2" class="correct">A. 110 degrees or hotter for two or more hours
-        </label></p>
-        <label class="option">
-            <input type="radio" name="q2" class="wrong">B. 120 degreesfor any period of time 
-        </label></p>
-        <label class="option">
-            <input type="radio" name="q2" class="wrong">C. 100 degress
-        </label></p>
-        <label class="option">
-            <input type="radio" name="q2" class="wrong">D. 105 degrees
-        </label></p>
-    <div class="font-medium hint">Hint:</div>
-   <div class="font semi-bold feedback correct-msg">It's very high number that must be sustained for atleast a couple of hours</div>
-    </div></br>
-    
-    
-   <div class="question block">
-     <p class="font-bold question">3. Which of these is a recommended way to keep your home cool during heatwave?</p>
-         
-         
-   <label class="option">
-      <input type="radio" name="q3" class="wrong">A. Keeping all windows open to let the breeze in
-   </label></p>
-   <label class="option">
-     <input type="radio" name="q3" class="correct">B.Covering windows with drapes or using window reflectors
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">C. Turning on all ceiling fans and leaving the doors open 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">D. Increasing the number of indoor plants
-    </label></p>
-        
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Think about blocking or reflecting the sun's rays</div>
-  </div></br>
-         
-         
- <div class="question-block">
-  <p class="font-bold question">4. Why does the video state that fans alone will not prevent heat-related illness?</p>
-            
-            
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">A. Fans are only effective at night.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">B. Fans use too much electricity during outages.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="correct">C. Fans only move air around and do not lower body core temperature in extreme heat.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">D. Fans increase the relative humidity in a room.
-    </label></p>
-            
-            
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Consider whether moving hot air around is the same as cooling it down</div>
-  </div></br>
-         
-         
-  <div class="question block">
-    <p class="font-bold question">5. Which symptom is characteristic of 'heat cramps'</p>
-
-    <label class="option">
-      <input type="radio" name="q5" clas="wrong">A. Red,hot, and dry skin
-    </label></p>
-    <label class="option">
-     <input type="radio" name="q5" class="correct">B.Severe muscle pain caused by heavy sweating
-    </label></p>
-   <label class="option">
-      <input type="radio" name="q5" class="wrong">C.Dizziness and nausea
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">D. Slow pulse and high blood pressure.
-    </label></p>
-            
-            
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">The name of the condition tells you exactly what the main symptom is.</div>
-  </div></br>
-            
-            
- <div class="question-block">
-  <p class="font-bold question">6. What is the most serious heat-related illness,which can cause death or permanent disability?</p>
-
-
-                
-                
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">A. Dehydration
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">B.Sunburn
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">C. Heat exhaustion
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="correct">D. Heat stroke
-    </label></p>
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">It happens when body temperature hits 106 degrees or higher in a very short time.</div>
-  </div></br>
-
-  <div class="question-block">
-   <p class="font-bold question">7. How quickly can the internal temperature of a car reach 100 degrees if it's 79 degrees outside?</p>
-
-
-   <label class="option">
-      <input type="radio" name="q7" class="wrong">A. Only if the windows are rolled up tightly
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="correct">B. In only 10 minutes
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">C. In about one hour.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">D.Only if the engine is running.                    
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">The time frame is shockingly shoet,even on a day that doesn't feel 'extreme'.</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font semi-bold question">8. Which type of beverages should you avoid during extreme heat to stay properly hydrated?</p>
-
-
-    <label class="option">
-    <input type="radio" name="q8" class="correct">A. Caffeine,alcohol, and sugary drinks.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">B. Cold tea and smoothies
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">C.Tap water and distilled water
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">D. Fruit juices and milk
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font semi-bold feedback corrected-msg">Think about drinks that are diuretics or have high sugar content.</div>
-  </div></br>
-
-  <div class="question-block">
-    <p class="font-bold question">9. What is the best time of day to walk your pets during heatwave?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q9" class="correct">A. Early morning or late evening
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">B.Right before the sun sets.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">C. In the middle of the afternoon.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">D. Anytime, as long as you walk fast.
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Look for the times when the sun is at its lowest or absent.</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">10. What should you do if someone shows symptoms of a weak,rapid pulse and red,hot,dry skin?</p>
-
-    <label class="option">
-      <input type="radio" name="q10" class="correct">A. Call 911 immediately 
-    </label></p>
-    <label class=option>
-      <input type="radio" name="q10" class="wrong">B. Wait one hour to seeif the symptoms improve
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">C. Tell them to walk it off in the shade 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q10" class="wrong">D. Give them a cold soda to drink
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">These symptoms indicate alife-threatening emergency(heat stroke).</div> 
-  </div></br>
-
-  <div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: FOREST FIRE</h2>
-  <div class="question-block">
-    <p class="font-bold question">1.What are the four basic types of forest fires identified in the module?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">A. Systematic,Technological,Direct and Indirect
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">B. Natural,Human,Accidental,and Intentional
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">C. Head,Finger,Flank and Tail
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q1" class="correct">D. Ground,Surface,Crown and Spot fires
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedbackcorrected-msg">Think about the layers of the forest and how fire might 'hop' from one spot to another. </div>
-  </div></br>
-
-
-
-  <div class="question-block">
-    <p class="font-bold question">2. According to the fire triangle, which three elements are required for a forest fire to continue burning?</p>
-
-
-
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">A. Wind,Temperature,and Humidity
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">B.Lighting,Humans and Climate change
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="correct">C.Heat,Oxygen and Fuel
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">D. Fuel,and Topography
-    </label></p>
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">What are the three physical 'ingredients' needed for a flame to exist?</div>
-  </div></br>
-                                
-
-
-  <div class="question-block">
-    <p class="font-bold question">3.Which component ofthe fire enviroment is considered the most variable over time and the most difficult to predict?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">A. Topography
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">B. Fuel loading
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="correct">C.Weather
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">D.Live fuel ratio
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Think about which factor can change drastically within just few minutes.</div>
- </div></br>
-                                
-  <div class="question-block">
-    <p class="font-bold question">4. How does topography influence the speed of the fire spread?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">A. Fire spreads slower up a slope due to gravity.  
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">B. Topography has no impact on the speed of spread. 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="correct">C. Fire spreads faster up a slope than on level ground
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q4" class="wrong">D. Fire only travels fast on flat,open plains.
-    </label></p>
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Consider the effectof heat rising toward the trees above the fire front</div>
-                                
-  </div></br>
-                                
-
-  <div class="question-block">
-    <p class="font-bold question">5. In terms of personal safety,which area should a firefighter generally avoid when evacuating a fire area?</p>
-
-
-    <label class="option">
-    <input type="radio" name="q5" class="wrong">A. Already burnt-out areas
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">B. Rocky zones
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">C. Streams and depressions
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="correct">D. the top of the mountain
-    </label>
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Think about the direction in which fire travels the fastest</div>
-  </div></br>
-                                
-                                
-  <div class="question-block">
-    <p class="font-bold question">6. Which principle is recommended for creating a 'fire-resistant' forest to reduce crown fire likelihood</p>
-
-
-  <label class="option">
-    <input type="radio" name="q6" class="correct">A. Increasing the spacing between tree crowns
-  </label></p>
-  <label class="option">
-  <input type="radio" name="q6" class="wrong">B. Decreasing the height of the base of the tree crowns
-  </label></p>
-  <label class="opyion">
-    <input type="radio" name="q6" class="wrong">C. Replacing large with smaller,denser vegetation
-  </label></p>
-  <label class="option">
-    <input type="radio" name="q6" class="wrong">D. Planting trees closer together for moisture retention
-  </label></p>
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Focus on the principle of 'horizantal spacing' between the tops of trees</div>
-  </div></br>
-  <div class="question-block">
-    <p class="font-bold question">7. What is the primary objective ofthe 'mopping up' process in fire suppression?</p>
-                               
-
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">A. To evacuate local communities near the forest.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">B. To ignite a new fire in front of the main firefront
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="correct">C. To prevent another fire from starting due to sparks or debris 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">D. To set the fire danger rating for the next day 
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Think of this as the final 'cleanup' step to ensure the fire is truly gone</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">8. The backfiring method of supression is characterized by which of the following?</p>
-
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">A. It is the safest and most common method used by beginners.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">B. It is systematic strategy involving public awareness campaigns.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="correct">C. It involves deliberately generating a fire infront of an advancing forest fire.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">D. It uses only water and foam to cool the fire head. 
-    </label></p>
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Consider the phrase 'fighting fire with fire'</div>
-
-  </div></br>
-                                
-
-  <div class="question-block">
-    <p class="font-bold question">9. Which section of an active forest fire is directly related to the direction of the wind and typically travels the fastest?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">A. The finger
-    </label></p>
-    <label class="option">
-      <input type="radio" mame="q9" class="correct">B. The head
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">C. The flank
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">D. The tail
-    </label></p>
-                                    
-                                    
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback correceted-msg">Think of the 'front' ofa moving object</div>
-  </div></br>
-  <div class="question-block">
-    <p class="font-bold question">10. Fire supression aims to reduce oxygen concentration in the air to below what percentage to stop flaming combustion?</p>
-                                
-  <label class="option">
-    <input type="radio" name="q10" class="wrong">A. 21%
-  </label></p>
-  <label class="option">
-    <input type="radio" name="q10" class="wrong">B. 50%
-  </label></p>
-  <label class="option">
-    <input type="radio" name="q10" class="correct">C. 15%
-  </label></p>
-  <label class="option">
-    <input type="radio" name="q10" class="wrong">D.5%
-  </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">It is a percentage just below the normal atmospheric level.</div>
-  </div></br>
-                                
-                                
-  <div class="mb-12 border-1-4 border-red-500 pl-6">
-  <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: LANDSLIDES</h2>
-
-  <div class="question-block">
-    <p class="font-bold question">1. What is the primary definition of a landslide according to the video?</p>
-
-
-    <label class="option">
-        <input type="radio" name="q1" class="wrong">A. The overflow of water onto normally dry land 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q1" class="wrong">B. The shaking of the ground caused by seismic waves
-    </label></p>
-    <label class="option">
-      <input type="radio" anme="q1" class="wrong">C. The eruption of molten rock from beneath the earth's curst 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q1" class="correct">D. When the upper mass of the soil disconnects from the lower layer and travels downslope.
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">Focus on the movement of'soil' and 'slopes'</div>
-  </div></br>
-
-
-  <div class="question block">
-    <p class="font-bold question">2. Which of the following is mentioned as a human activity that increases the risk of a landslide?</p>
-
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">A. Agriculture in flat plains 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="correct">B. Mining and cutting trees
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">C.Building Reservoirs
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q2" class="wrong">D. Installing solar panels
-    </label></p>
-
-                                    
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">Consider activities that remove natural vagetation or alter the ground's structure</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">3. Landslides can vary greatly.What is the maximum speed mentioned in the video for a disastrously fast landslide? </p>
-                                
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">A.1000 meters per hour
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">B. 10 meters per hours
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="correct">C. More then 100 meters per hour
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q3" class="wrong">D. 50 meters per hours
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected msg">Think of a speed that is significantly faster than a slow walk</div>
-  </div></br>
-
-
-  <div class="question-block">
-      <p class="font-bold question">4. What is an early warning sign of a potential landslide that you should look for in the geography around you?</p>
-
-
-    <label class="options">
-      <input type="radio" name="q4" class="wrong">A. Sudden increase in air temperature
-    </label></p>
-    <label class="options">
-      <input type="radio" name="q4" class="wrong">B. A change in the colour of the grass
-    </label></p>
-    <label class="options">
-      <input type="radio" name="q4" class="wrong">C. Cloudy skies and light drizzles                                    
-    </label></p>
-    <label class="options">
-      <input type="radio" name="q4" class="correct">D. Cracks in the soil or bulging ground
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback correceted-msg">Look for visible changes in the shape or integrity of the earth.</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">5. If you are indoors and cannot evacuate during a landslide,where should you seek shelter?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">A. In the middle of large room
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="correct">B. Under a sturdy piece of furniture like a table.
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">C. In the basement
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q5" class="wrong">D. Near a window to monitor the landslide's path
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback correceted-msg">Think about how you would protect yourself from things falling from above.</div>
-                                    
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">6. While outdoors, which areas should you specifically avoid to reduce the risk of being caught?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">A. Open parking lots 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">B. High ridges and plateaus 
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="wrong">C. Under tall trees
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q6" class="correct">D. Valleys,dips,and areas where water accumulates 
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback correceted-msg">Consider where mud and rocks would naturally flow due to gravity.</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">7. What is the recommended 'self-protection' position if you are directly caught in a landslide path?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">A. Stand tall and brace yourself against a tree
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">B. Lie flat on your stomach with arms outstretched
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="wrong">C. Run in a straight line away from the debris
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q7" class="correct">D. Curl in a tight ball and protect your head with your arms
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">This position is common in many disaster safety protocols to protect the head.</div>
-  </div></p>
-
-
-  <div class="question-block">
-    <p class="font-bold question">8. After a landslide, when is it safe to return to the affected area?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">A. As soon as the noise of the landslide stops
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">B. Immediately to start searching for belongings
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="correct">C. Only when it has been declared safe by the authorities
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q8" class="wrong">D. When you see your neighbours returning
-    </label></p>
-
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback corrected-msg">Look for the answer that relies on expert evaluation</div>
-  </div></br>
-
-
-  <div class="question-block">
-    <p class="font-bold question">9. Which items are specifically mentioned as being essential for an emergency kit in case of evacuation?</p>
-
-
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">A. Fresh fruits and vegetables
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">B. Frozen meals and ice packs
-    </label></p>
-    <label class="option">
-      <input type="radio" name="q9" class="wrong">C. Extra clothing and blankets only
-    </label></p>
-    <label class="options">
-      <input type="radio" name="q9" class="correct">D. Canned foods anditems with a long shelf life
-    </label></p>
-
-  <div class="font-medium hint">Hint:</div>
-  <div class="font-semibold feedback correceted-msg">Think about foods that can be stored for long periods without power</div>
-  </div></br>
-
-  <div class="question-block">
-    <p class="font-bold question">10. What is the one of the first things you should do after a landslide if you are safe?</p>
-
-
-      <label class="option">
-         <input type="radio" name="q10" class="wrong">A. Go to sleep to recover from the stress
-      </label></p>
-      <label class="option">
-         <input type="radio" name="q10" class="wrong">B. Leave the area completely and never return
-      </label></p>
-      <label class="option">
-        <input type="radio" name="q10" class="wrong">C. Immediately start rebuilding your home
-      </label></p>
-      <label class="option">
-        <input type="radio" name="q10" class="correct">D. Search for and assist anyone who is missing
-      </label></p>
-
-
-    <div class="font-medium hint">Hint:</div>
-    <div class="font-semibold feedback correceted-msg">This action is about safety rescue of others.</div>
-  </div></br>
-
-  </div><br>
-          
-          
-        
-        
-        
-        
+        <div class="mb-12 border-l-4 border-red-500 pl-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: EARTHQUAKE</h2>
+            <div class="question-block">
+                <p class="font-bold question">1. What are the 19 to 20 pieces of the Earth's surface that move on the molten mantle called?</p>
+                <label class="option block"><input type="radio" name="eq1" class="wrong"> A. Mantle fragment</label>
+                <label class="option block"><input type="radio" name="eq1" class="wrong"> B. Lithospheric blocks</label>
+                <label class="option block"><input type="radio" name="eq1" class="wrong"> C. Seismic Slab</label>
+                <label class="option block"><input type="radio" name="eq1" class="correct"> D. Tectonic Plate</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Earth's surface is composed of these large plates that continuously shift, causing seismic activity.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">2. Which term describes the exact point underground where an earthquake originates?</p>
+                <label class="option block"><input type="radio" name="eq2" class="wrong"> A. Focus zone</label>
+                <label class="option block"><input type="radio" name="eq2" class="correct"> B. Hypocenter</label>
+                <label class="option block"><input type="radio" name="eq2" class="wrong"> C. Epicenter</label>
+                <label class="option block"><input type="radio" name="eq2" class="wrong"> D. Litho-point</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">It starts with 'hypo-', which often refers to something being 'under' or 'below'.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">3. Which type of seismic waves are the most destructive to buildings and life?</p>
+                <label class="option block"><input type="radio" name="eq3" class="wrong"> A. Body waves</label>
+                <label class="option block"><input type="radio" name="eq3" class="correct"> B. Surface waves</label>
+                <label class="option block"><input type="radio" name="eq3" class="wrong"> C. Primary waves</label>
+                <label class="option block"><input type="radio" name="eq3" class="wrong"> D. Secondary waves</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Consider which waves travel specifically along the Earth's crust where structures are built.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">4. According to the Richter scale, what magnitude range is classified as a 'strong' earthquake?</p>
+                <label class="option block"><input type="radio" name="eq4" class="wrong"> A. 5.0 to 5.9</label>
+                <label class="option block"><input type="radio" name="eq4" class="correct"> B. 6.0 to 6.9</label>
+                <label class="option block"><input type="radio" name="eq4" class="wrong"> C. 4.0 to 4.9</label>
+                <label class="option block"><input type="radio" name="eq4" class="wrong"> D. Above 7.0</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">This range sits between moderate and major earthquakes.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">5. What unusual environmental change might help scientists predict an earthquake up to seven days in advance?</p>
+                <label class="option block"><input type="radio" name="eq5" class="wrong"> A. Rapid change in weather</label>
+                <label class="option block"><input type="radio" name="eq5" class="wrong"> B. Sudden migration of birds</label>
+                <label class="option block"><input type="radio" name="eq5" class="correct"> C. Increase in Radon Gas</label>
+                <label class="option block"><input type="radio" name="eq5" class="wrong"> D. Sudden drop in sea level</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Look for the mention of specific radioactive gases released from the Earth's crust.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">6. If you are indoors during an earthquake, where is the safest place to take shelter?</p>
+                <label class="option block"><input type="radio" name="eq6" class="correct"> A. Under a sturdy table</label>
+                <label class="option block"><input type="radio" name="eq6" class="wrong"> B. Near a large window</label>
+                <label class="option block"><input type="radio" name="eq6" class="wrong"> C. In an elevator</label>
+                <label class="option block"><input type="radio" name="eq6" class="wrong"> D. In the middle of the room</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about protecting yourself from things that might fall from the ceiling or walls.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">7. What should you do if you are driving when an earthquake starts?</p>
+                <label class="option block"><input type="radio" name="eq7" class="wrong"> A. Exit the car and lie down on the road</label>
+                <label class="option block"><input type="radio" name="eq7" class="correct"> B. Pull over to a safe spot and stay inside car</label>
+                <label class="option block"><input type="radio" name="eq7" class="wrong"> C. Speed up and go home faster</label>
+                <label class="option block"><input type="radio" name="eq7" class="wrong"> D. Stop immediately even in the middle of bridge</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on finding a safe distance from falling objects and remaining in your current enclosure.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">8. Why is it important to turn off gas and water taps after the shaking stops?</p>
+                <label class="option block"><input type="radio" name="eq8" class="wrong"> A. To signal that you are safe</label>
+                <label class="option block"><input type="radio" name="eq8" class="wrong"> B. To save money on bills</label>
+                <label class="option block"><input type="radio" name="eq8" class="correct"> C. To prevent leaks, explosion, or flooding</label>
+                <label class="option block"><input type="radio" name="eq8" class="wrong"> D. Because the city will shut them anyway</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Consider the secondary disasters (like fires) that can happen when infrastructure is damaged.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">9. If you are in a coastal area and feel a strong earthquake, what secondary danger should you move away from?</p>
+                <label class="option block"><input type="radio" name="eq9" class="wrong"> A. Strong winds</label>
+                <label class="option block"><input type="radio" name="eq9" class="wrong"> B. Volcanic eruptions</label>
+                <label class="option block"><input type="radio" name="eq9" class="correct"> C. Tsunamis</label>
+                <label class="option block"><input type="radio" name="eq9" class="wrong"> D. Forest fires</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about large waves triggered by underwater seismic activity.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">10. Which of these is a recommended way to prepare your home for a future earthquake?</p>
+                <label class="option block"><input type="radio" name="eq10" class="wrong"> A. Leaving the doors and windows open at all the time</label>
+                <label class="option block"><input type="radio" name="eq10" class="correct"> B. Securing heavy furniture and devices to the wall</label>
+                <label class="option block"><input type="radio" name="eq10" class="wrong"> C. Storing all heavy items on high shelves</label>
+                <label class="option block"><input type="radio" name="eq10" class="wrong"> D. Removing all sturdy furniture from the house</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on the action that prevents heavy objects from tipping over during vibrations.</div>
+            </div><br>
+        </div>
+
+        <div class="mb-12 border-l-4 border-red-500 pl-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: CYCLONE</h2>
+            <div class="question-block">
+                <p class="font-bold question">1. What are the huge sea waves generated by a cyclone that cause large-scale destruction in coastal areas called?</p>
+                <label class="option block"><input type="radio" name="cy1" class="wrong"> A. Flash flood</label>
+                <label class="option block"><input type="radio" name="cy1" class="correct"> B. Storm surge</label>
+                <label class="option block"><input type="radio" name="cy1" class="wrong"> C. Tidal waves</label>
+                <label class="option block"><input type="radio" name="cy1" class="wrong"> D. Tsunami</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">The term starts with 'Storm' and refers to a sudden rise in water level.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">2. Which of these is a safety measure that the government should implement for people in cyclone-prone areas?</p>
+                <label class="option block"><input type="radio" name="cy2" class="wrong"> A. Telling people to ignore official warnings</label>
+                <label class="option block"><input type="radio" name="cy2" class="wrong"> B. Encouraging people to stay in old buildings</label>
+                <label class="option block"><input type="radio" name="cy2" class="wrong"> C. Distributing rumors to keep people alert</label>
+                <label class="option block"><input type="radio" name="cy2" class="correct"> D. Establishing forecast management systems</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about the system used to predict weather events before they happen.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">3. What is the primary purpose of a 'risk map' as described in the video?</p>
+                <label class="option block"><input type="radio" name="cy3" class="wrong"> A. To identify hidden treasures along the coast</label>
+                <label class="option block"><input type="radio" name="cy3" class="correct"> B. To estimate the extent of destruction to life and infrastructure</label>
+                <label class="option block"><input type="radio" name="cy3" class="wrong"> C. To track the movement of animals in the forest</label>
+                <label class="option block"><input type="radio" name="cy3" class="wrong"> D. To find the best places for vacation</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">It relates to 'estimating' the potential impact of the disaster.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">4. When a cyclone warning is issued, what should individuals do to prepare their important documents?</p>
+                <label class="option block"><input type="radio" name="cy4" class="wrong"> A. Leave them in a safe box on the floor</label>
+                <label class="option block"><input type="radio" name="cy4" class="wrong"> B. Hide them under furniture</label>
+                <label class="option block"><input type="radio" name="cy4" class="wrong"> C. Keep them near an open window for easy access</label>
+                <label class="option block"><input type="radio" name="cy4" class="correct"> D. Place them in waterproof packets or containers</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on the type of protection needed against water and moisture.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">5. Why is it important to secure sharp objects before a cyclone?</p>
+                <label class="option block"><input type="radio" name="cy5" class="wrong"> A. Because they might block the drainage system</label>
+                <label class="option block"><input type="radio" name="cy5" class="wrong"> B. Because they might get rusty</label>
+                <label class="option block"><input type="radio" name="cy5" class="correct"> C. Because heavy winds can turn them into dangerous projectiles</label>
+                <label class="option block"><input type="radio" name="cy5" class="wrong"> D. Because they might be stolen during the storm</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about what happens to loose items when winds become extremely fast.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">6. What is the recommended action regarding household power and gas connections during a cyclone?</p>
+                <label class="option block"><input type="radio" name="cy6" class="wrong"> A. Leave the gas on for cooking purposes</label>
+                <label class="option block"><input type="radio" name="cy6" class="wrong"> B. Keep them on to stay connected to the internet</label>
+                <label class="option block"><input type="radio" name="cy6" class="wrong"> C. Only turn them off if you see water entering the house</label>
+                <label class="option block"><input type="radio" name="cy6" class="correct"> D. Switch off electrical equipment and close gas connections</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">It involves a standard safety 'switch' and 'closure' procedure.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">7. What should you do if you believe your house will not withstand the cyclone?</p>
+                <label class="option block"><input type="radio" name="cy7" class="correct"> A. Leave before the onset of the cyclone</label>
+                <label class="option block"><input type="radio" name="cy7" class="wrong"> B. Climb onto the roof to avoid flooding</label>
+                <label class="option block"><input type="radio" name="cy7" class="wrong"> C. Hide under a wooden table</label>
+                <label class="option block"><input type="radio" name="cy7" class="wrong"> D. Stay in the basement and hope for the best</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">The advice is focused on getting to a safe place before the storm begins.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">8. Why does the video advise drinking only boiled or chlorinated water during and after a cyclone?</p>
+                <label class="option block"><input type="radio" name="cy8" class="wrong"> A. To improve the taste of the water</label>
+                <label class="option block"><input type="radio" name="cy8" class="correct"> B. To avoid waterborne diseases</label>
+                <label class="option block"><input type="radio" name="cy8" class="wrong"> C. Because cold water is bad for the throat</label>
+                <label class="option block"><input type="radio" name="cy8" class="wrong"> D. To keep the water warm in cold weather</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about what happens to water quality when floods and sewage systems mix.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">9. What is an important safety rule to follow after the cyclone has passed?</p>
+                <label class="option block"><input type="radio" name="cy9" class="wrong"> A. Go to the beach to see the waves</label>
+                <label class="option block"><input type="radio" name="cy9" class="wrong"> B. Start driving your car immediately to survey the area</label>
+                <label class="option block"><input type="radio" name="cy9" class="wrong"> C. Immediately enter damaged buildings to check for items</label>
+                <label class="option block"><input type="radio" name="cy9" class="correct"> D. Watch out for broken electric poles and wires</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Consider the hazards left behind by high winds and falling trees.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">10. According to the video, what is the ultimate goal of following these safety measures?</p>
+                <label class="option block"><input type="radio" name="cy10" class="correct"> A. To mitigate the loss of life and property</label>
+                <label class="option block"><input type="radio" name="cy10" class="wrong"> B. To change the direction of the cyclone</label>
+                <label class="option block"><input type="radio" name="cy10" class="wrong"> C. To stop the cyclone from hitting the land</label>
+                <label class="option block"><input type="radio" name="cy10" class="wrong"> D. To make the government work harder</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on the word that means to 'reduce' or 'lessen' the severity of something.</div>
+            </div><br>
+        </div>
+
+        <div class="mb-12 border-l-4 border-red-500 pl-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: FLOODS</h2>
+            <div class="question-block">
+                <p class="font-bold question">1. Why is it incorrect to assume you are safe from floods just because they haven't happened in your area before?</p>
+                <label class="option block"><input type="radio" name="fl1" class="wrong"> A. Topography never changes over time</label>
+                <label class="option block"><input type="radio" name="fl1" class="wrong"> B. Flood control measures are always 100% effective</label>
+                <label class="option block"><input type="radio" name="fl1" class="wrong"> C. Flood history is the only factor scientists use to predict risks</label>
+                <label class="option block"><input type="radio" name="fl1" class="correct"> D. Anywhere it rains, it can flood</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about the simplest condition required for a flood to occur.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">2. What is a recommended preventive action to take regarding household waste before heavy rains start?</p>
+                <label class="option block"><input type="radio" name="fl2" class="wrong"> A. Bury waste in the backyard to act as a barrier</label>
+                <label class="option block"><input type="radio" name="fl2" class="correct"> B. Remove plastic bags and bottles from drains</label>
+                <label class="option block"><input type="radio" name="fl2" class="wrong"> C. Keep all waste in plastic bags inside the house</label>
+                <label class="option block"><input type="radio" name="fl2" class="wrong"> D. Burn plastic waste in the garden</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on keeping the paths where water flows clear of obstructions.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">3. What should you do immediately if flash flooding occurs in your area?</p>
+                <label class="option block"><input type="radio" name="fl3" class="wrong"> A. Try to build a barrier around your house</label>
+                <label class="option block"><input type="radio" name="fl3" class="wrong"> B. Wait for official government instructions to move</label>
+                <label class="option block"><input type="radio" name="fl3" class="correct"> C. Move immediately to higher ground</label>
+                <label class="option block"><input type="radio" name="fl3" class="wrong"> D. Stay in your basement until the rain stops</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Flash floods are characterized by their extreme speed and suddenness.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">4. Why is it dangerous to touch electrical equipment during a flood if you are wet?</p>
+                <label class="option block"><input type="radio" name="fl4" class="wrong"> A. Wet hands might slip off the switch</label>
+                <label class="option block"><input type="radio" name="fl4" class="wrong"> B. It will cause a power outage for the whole neighborhood</label>
+                <label class="option block"><input type="radio" name="fl4" class="correct"> C. Water conducts electricity, posing a risk of electrocution</label>
+                <label class="option block"><input type="radio" name="fl4" class="wrong"> D. The equipment might get damaged</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Consider the relationship between water and electricity.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">5. How much moving flood water is typically enough to carry away a car?</p>
+                <label class="option block"><input type="radio" name="fl5" class="wrong"> A. 0.1 meters</label>
+                <label class="option block"><input type="radio" name="fl5" class="correct"> B. 0.5 meters</label>
+                <label class="option block"><input type="radio" name="fl5" class="wrong"> C. 5.0 meters</label>
+                <label class="option block"><input type="radio" name="fl5" class="wrong"> D. 2.0 meters</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">It is a relatively small amount, about the height of a car's tire.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">6. What is the specific danger of walking in shallow, fast-moving water?</p>
+                <label class="option block"><input type="radio" name="fl6" class="wrong"> A. It might contain fish that can bite</label>
+                <label class="option block"><input type="radio" name="fl6" class="wrong"> B. It can ruin your shoes</label>
+                <label class="option block"><input type="radio" name="fl6" class="wrong"> C. It will always be freezing cold</label>
+                <label class="option block"><input type="radio" name="fl6" class="correct"> D. Just 6 inches (about 15 cm) of moving water can knock you off your feet</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">The danger is related to the force of the water on your body.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">7. Why should you avoid eating food that has come into contact with flood water?</p>
+                <label class="option block"><input type="radio" name="fl7" class="wrong"> A. The food will be too soggy to enjoy</label>
+                <label class="option block"><input type="radio" name="fl7" class="wrong"> B. The food might be too cold to eat</label>
+                <label class="option block"><input type="radio" name="fl7" class="wrong"> C. Flood water removes all the nutrients from the food</label>
+                <label class="option block"><input type="radio" name="fl7" class="correct"> D. Flood water is often contaminated with sewage, chemicals, and oil</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about what else mixes into the water when streets and sewers overflow.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">8. After a flood, when is it considered safe to return to your home?</p>
+                <label class="option block"><input type="radio" name="fl8" class="wrong"> A. Once the power has been restored to the area</label>
+                <label class="option block"><input type="radio" name="fl8" class="correct"> B. Only when local authorities advise it is safe</label>
+                <label class="option block"><input type="radio" name="fl8" class="wrong"> C. When you see your neighbours returning</label>
+                <label class="option block"><input type="radio" name="fl8" class="wrong"> D. As soon as the rain stops</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Safety depends on the expert assessment of structural and environmental risks.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">9. What should you do before reconnecting your power supply after a flood?</p>
+                <label class="option block"><input type="radio" name="fl9" class="correct"> A. Have a qualified engineer or electrician check the system</label>
+                <label class="option block"><input type="radio" name="fl9" class="wrong"> B. Dry the main switch with a towel</label>
+                <label class="option block"><input type="radio" name="fl9" class="wrong"> C. Wait exactly 24 hours after the water recedes</label>
+                <label class="option block"><input type="radio" name="fl9" class="wrong"> D. Check if the lights work by turning them on briefly</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">This task requires professional expertise to ensure the system is safe.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">10. Why should you use 'extreme caution' when entering a building after a flood has receded?</p>
+                <label class="option block"><input type="radio" name="fl10" class="wrong"> A. The air inside will be too humid</label>
+                <label class="option block"><input type="radio" name="fl10" class="wrong"> B. The floor might be dirty</label>
+                <label class="option block"><input type="radio" name="fl10" class="correct"> C. There may be hidden damage to the foundations</label>
+                <label class="option block"><input type="radio" name="fl10" class="wrong"> D. You might trip over your own furniture</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about the part of the building that is underground and most affected by water saturation.</div>
+            </div><br>
+        </div>
+
+        <div class="mb-12 border-l-4 border-red-500 pl-6">
+            <h2 class="text-2xl font-bold text-slate-800 mb-2">Topic: HEAT WAVES</h2>
+            <div class="question-block">
+                <p class="font-bold question">1. What are the two factors combined to measure the 'heat index'?</p>
+                <label class="option block"><input type="radio" name="hw1" class="wrong"> A. Air Pressure</label>
+                <label class="option block"><input type="radio" name="hw1" class="wrong"> B. UV index and cloud cover</label>
+                <label class="option block"><input type="radio" name="hw1" class="wrong"> C. Direct sunlight and surface temperature</label>
+                <label class="option block"><input type="radio" name="hw1" class="correct"> D. Relative humidity and air temperature</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about the 'wetness' of the air and the actual degrees on the thermometer.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">2. At what heat index level is an 'excessive heat warning' typically issued?</p>
+                <label class="option block"><input type="radio" name="hw2" class="correct"> A. 110 degrees or hotter for two or more hours</label>
+                <label class="option block"><input type="radio" name="hw2" class="wrong"> B. 120 degrees for any period of time</label>
+                <label class="option block"><input type="radio" name="hw2" class="wrong"> C. 100 degrees</label>
+                <label class="option block"><input type="radio" name="hw2" class="wrong"> D. 105 degrees</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">It's a very high number that must be sustained for at least a couple of hours.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">3. Which of these is a recommended way to keep your home cool during a heatwave?</p>
+                <label class="option block"><input type="radio" name="hw3" class="wrong"> A. Keeping all windows open to let the breeze in</label>
+                <label class="option block"><input type="radio" name="hw3" class="correct"> B. Closing blinds and curtains to block direct sunlight</label>
+                <label class="option block"><input type="radio" name="hw3" class="wrong"> C. Turning on all lights to create airflow</label>
+                <label class="option block"><input type="radio" name="hw3" class="wrong"> D. Opening the oven door to let heat escape</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about blocking the source of heat from entering.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">4. What is a key sign of heat exhaustion that requires immediate action?</p>
+                <label class="option block"><input type="radio" name="hw4" class="wrong"> A. Feeling slightly warm</label>
+                <label class="option block"><input type="radio" name="hw4" class="correct"> B. Heavy sweating, cold and clammy skin, dizziness</label>
+                <label class="option block"><input type="radio" name="hw4" class="wrong"> C. Mild thirst</label>
+                <label class="option block"><input type="radio" name="hw4" class="wrong"> D. Wanting to take a nap</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Focus on the body's inability to regulate temperature properly.</div>
+            </div><br>
+
+            <div class="question-block">
+                <p class="font-bold question">5. Who is most at risk during a heatwave?</p>
+                <label class="option block"><input type="radio" name="hw5" class="wrong"> A. Young athletes</label>
+                <label class="option block"><input type="radio" name="hw5" class="correct"> B. Elderly people, infants, and those with chronic illnesses</label>
+                <label class="option block"><input type="radio" name="hw5" class="wrong"> C. Office workers</label>
+                <label class="option block"><input type="radio" name="hw5" class="wrong"> D. Teenagers</label>
+                <div class="font-semibold feedback hidden text-blue-700 mt-2">Think about who has the weakest ability to regulate body temperature.</div>
+            </div><br>
+        </div>
     </section>
 
-    <footer class="py-12 bg-slate-100 text-center text-slate-400 text-sm">
-        &copy; 2026 ResilientCampus Safety Initiative
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-8 px-4 text-center text-sm">
+        <p class="font-bold text-white mb-1">ResilientCampus</p>
+        <p>Disaster Preparedness & Emergency Response System</p>
+        <div class="flex justify-center gap-6 mt-4">
+            <a href="#education" class="hover:text-white transition-colors">Learn</a>
+            <a href="#news" class="hover:text-white transition-colors">News</a>
+            <a href="#Quiz" class="hover:text-white transition-colors">Quiz</a>
+            <a href="admin.html" class="hover:text-white transition-colors">Admin</a>
+        </div>
     </footer>
 
+    <!-- ==================== ALL JAVASCRIPT ==================== -->
     <script>
-        // 1. Capture Identity
-        let activeUserEmail = localStorage.getItem("verifiedCampusEmail");
-        if (!activeUserEmail) {
-            activeUserEmail = prompt("🔒 Enter your Campus Email Address to activate safety tracking:", "student@college.edu");
-            if (activeUserEmail && activeUserEmail.trim() !== "") {
-                localStorage.setItem("verifiedCampusEmail", activeUserEmail);
-            } else {
-                activeUserEmail = "anonymous_student@college.edu";
+    const API_BASE = "https://disaster-api-af2w.onrender.com";
+    let selectedFile = null;
+
+    // =============================================
+    // TOAST NOTIFICATIONS
+    // =============================================
+    function showToast(message, type) {
+        const container = document.getElementById("toastContainer");
+        const colors = {
+            success: "bg-green-900/90 border-green-700/50 text-green-200",
+            error: "bg-red-900/90 border-red-700/50 text-red-200",
+            info: "bg-slate-800/90 border-slate-700/50 text-slate-200"
+        };
+        const icons = { success: "fa-circle-check", error: "fa-circle-xmark", info: "fa-circle-info" };
+        const toast = document.createElement("div");
+        toast.className = "pointer-events-auto " + (colors[type] || colors.info) + " border backdrop-blur-sm rounded-xl px-4 py-3 flex items-start gap-2.5 shadow-xl toast-in text-sm";
+        toast.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + ' mt-0.5 flex-shrink-0"></i><span>' + message + '</span>';
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.remove("toast-in");
+            toast.classList.add("toast-out");
+            setTimeout(() => toast.remove(), 300);
+        }, 4000);
+    }
+
+    // =============================================
+    // PHOTO PREVIEW
+    // =============================================
+    function handlePhotoSelect(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        selectedFile = file;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById("previewImg").src = e.target.result;
+            document.getElementById("uploadArea").classList.add("hidden");
+            document.getElementById("photoPreview").classList.remove("hidden");
+            document.getElementById("photoStatus").textContent = "Ready to upload (" + (file.size / 1024 / 1024).toFixed(1) + " MB)";
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removePhoto() {
+        selectedFile = null;
+        document.getElementById("mediaProof").value = "";
+        document.getElementById("uploadArea").classList.remove("hidden");
+        document.getElementById("photoPreview").classList.add("hidden");
+        document.getElementById("progressFill").style.width = "0%";
+    }
+
+    // =============================================
+    // IMAGE COMPRESSION — 5MB → ~150KB
+    // =============================================
+    function compressImage(file, maxWidth, quality) {
+        return new Promise(function(resolve, reject) {
+            if (file.type.startsWith("video/")) {
+                var reader = new FileReader();
+                reader.onload = function(e) { resolve(e.target.result); };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+                return;
             }
-        }
-
-        async function sendAlert() {
-    const statusEl = document.getElementById("status-message");
-    if (statusEl) statusEl.innerText = "⏳ Gathering Location...";
-
-    // 1. Process the optional photo/video upload first
-    let finalMediaUrl = "No media attached";
-    const fileInput = document.querySelector('input[type="file"]');
-    if (fileInput && fileInput.files.length > 0) {
-        const file = fileInput.files[0];
-        finalMediaUrl = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onloadend = () => resolve(reader.result);
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var img = new Image();
+                img.onload = function() {
+                    var canvas = document.createElement("canvas");
+                    var width = img.width;
+                    var height = img.height;
+                    if (width > maxWidth) {
+                        height = Math.round((height * maxWidth) / width);
+                        width = maxWidth;
+                    }
+                    canvas.width = width;
+                    canvas.height = height;
+                    var ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, width, height);
+                    resolve(canvas.toDataURL("image/jpeg", quality));
+                };
+                img.onerror = function() { reject(new Error("Failed to load image")); };
+                img.src = e.target.result;
+            };
+            reader.onerror = function() { reject(new Error("Failed to read file")); };
             reader.readAsDataURL(file);
         });
     }
 
-    const options = { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 };
+    // =============================================
+    // UPLOAD TO CLOUDINARY VIA SPRING BOOT
+    // =============================================
+    function uploadToCloudinary(file) {
+        return compressImage(file, 800, 0.7).then(function(compressed) {
+            var byteString = atob(compressed.split(",")[1]);
+            var mimeString = compressed.split(",")[0].split(":")[1].split(";")[0];
+            var ab = new ArrayBuffer(byteString.length);
+            var ia = new Uint8Array(ab);
+            for (var i = 0; i < byteString.length; i++) {
+                ia[i] = byteString.charCodeAt(i);
+            }
+            var blob = new Blob([ab], { type: mimeString });
+            var formData = new FormData();
+            formData.append("file", blob, file.name || "photo.jpg");
 
-    // 2. Get GPS Location
-    navigator.geolocation.getCurrentPosition(async (position) => {
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        const mapsLink = `http://maps.google.com/?q=${lat},${lon}`;
-        const emergencyMessage = `🚨 EMERGENCY SOS! I need help. Location: ${mapsLink}`;
-
-        // 3. Try to update your Campus Dashboard
-        try {
-            const backendData = new FormData();
-            backendData.append("studentId", activeUserEmail);
-            backendData.append("latitude", lat);
-            backendData.append("longitude", lon);
-            backendData.append("time", new Date().toLocaleString());
-            backendData.append("mediaUrl", finalMediaUrl); 
-
-            await fetch('https://disaster-api-af2w.onrender.com/api/trigger-sos', {
-                method: 'POST',
-                body: backendData
+            return fetch(API_BASE + "/api/upload", {
+                method: "POST",
+                body: formData
+            }).then(function(response) {
+                return response.json().then(function(data) {
+                    if (!response.ok) throw new Error(data.error || "Upload failed");
+                    return data.url;
+                });
             });
-            if (statusEl) statusEl.innerText = "✅ SOS Sent to Dashboard!";
-        } catch (error) { 
-            console.log("Dashboard offline, relying on SMS."); 
-        }
-
-        // 4. ALWAYS trigger the SMS failover
-        window.location.href = `sms:8777393307?body=${encodeURIComponent(emergencyMessage)}`;
-        
-    }, (error) => {
-        // Fallback if GPS is blocked or fails
-        console.error("GPS Error:", error);
-        window.location.href = "sms:8777393307?body=SOS! I need help and my location is unavailable.";
-    }, options);
-}
-
-        function changeLanguage(langCode) {
-            localStorage.setItem("preferredLanguage", langCode);
-            document.cookie = "googtrans=/en/" + langCode + "; path=/";
-            document.cookie = "googtrans=/en/" + langCode + "; domain=" + window.location.hostname + "; path=/";
-            window.location.reload();
-        }
-
-        window.addEventListener('load', function() {
-            var savedLang = localStorage.getItem("preferredLanguage") || "en";
-            var picker = document.getElementById("language-picker");
-            if (picker) {
-                picker.value = savedLang; 
-            }
-            
-            if (savedLang !== "en" && document.cookie.indexOf("googtrans=/en/" + savedLang) === -1) {
-                document.cookie = "googtrans=/en/" + savedLang + "; path=/";
-                window.location.reload();
-            }
         });
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/sw.js')
-                    .then(reg => console.log('Service Worker Registered!', reg))
-                    .catch(err => console.error('Service Worker Registration Failed!', err));
+    }
+
+    // =============================================
+    // SEND SOS ALERT
+    // =============================================
+    function sendAlert() {
+        var statusEl = document.getElementById("status-message");
+        var sosBtn = document.getElementById("sosBtn");
+
+        // Disable button
+        sosBtn.disabled = true;
+        sosBtn.classList.remove("sos-pulse");
+        sosBtn.innerHTML = '<div style="width:30px;height:30px;border:3px solid rgba(255,255,255,0.3);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin:auto;"></div>';
+        statusEl.textContent = "Getting location...";
+        statusEl.className = "mt-6 font-semibold text-yellow-600";
+
+        // Get location
+        var locationPromise;
+        if (navigator.geolocation) {
+            locationPromise = new Promise(function(resolve) {
+                navigator.geolocation.getCurrentPosition(
+                    function(pos) {
+                        var lat = pos.coords.latitude.toFixed(6);
+                        var lng = pos.coords.longitude.toFixed(6);
+                        resolve({ lat: lat, lng: lng, text: lat + ", " + lng });
+                    },
+                    function() {
+                        resolve({ lat: "", lng: "", text: "Location unavailable (permission denied)" });
+                    },
+                    { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+                );
+            });
+        } else {
+            locationPromise = Promise.resolve({ lat: "", lng: "", text: "Geolocation not supported" });
+        }
+
+        locationPromise.then(function(loc) {
+            // Try reverse geocoding
+            var geoPromise;
+            if (loc.lat) {
+                geoPromise = fetch("https://nominatim.openstreetmap.org/reverse?format=json&lat=" + loc.lat + "&lon=" + loc.lng + "&zoom=16")
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.display_name) {
+                            var parts = data.display_name.split(",");
+                            return parts.slice(0, 3).join(",").trim() + " (" + loc.lat + ", " + loc.lng + ")";
+                        }
+                        return loc.text;
+                    })
+                    .catch(function() { return loc.text; });
+            } else {
+                geoPromise = Promise.resolve(loc.text);
+            }
+
+            return geoPromise.then(function(locationStr) {
+                // Upload photo if selected
+                var uploadPromise;
+                if (selectedFile) {
+                    statusEl.textContent = "Compressing & uploading image...";
+                    document.getElementById("photoStatus").textContent = "Uploading...";
+                    document.getElementById("progressFill").style.width = "50%";
+
+                    uploadPromise = uploadToCloudinary(selectedFile)
+                        .then(function(url) {
+                            document.getElementById("progressFill").style.width = "100%";
+                            document.getElementById("photoStatus").textContent = "Uploaded!";
+                            showToast("Image uploaded to Cloudinary", "success");
+                            return url;
+                        })
+                        .catch(function(err) {
+                            document.getElementById("photoStatus").textContent = "Upload failed";
+                            showToast("Image upload failed: " + err.message, "error");
+                            return ""; // Continue without image
+                        });
+                } else {
+                    uploadPromise = Promise.resolve("");
+                }
+
+                return uploadPromise.then(function(imageUrl) {
+                    // Send SOS
+                    statusEl.textContent = "Sending distress signal...";
+
+                    var sosData = {
+                        name: "Campus User",
+                        studentId: "N/A",
+                        location: locationStr,
+                        phone: "N/A",
+                        description: "Emergency SOS triggered from campus",
+                        imageUrl: imageUrl,
+                        status: "active"
+                    };
+
+                    return fetch(API_BASE + "/api/trigger-sos", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(sosData)
+                    }).then(function(response) {
+                        return response.json().then(function(result) {
+                            if (response.ok) {
+                                // SUCCESS
+                                sosBtn.innerHTML = "✓";
+                                sosBtn.classList.remove("bg-red-600", "hover:bg-red-700");
+                                sosBtn.classList.add("bg-green-600");
+                                statusEl.textContent = "✅ SOS Alert Sent Successfully! Help is on the way.";
+                                statusEl.className = "mt-6 font-semibold text-green-600";
+                                showToast("SOS Alert Sent!", "success");
+
+                                setTimeout(function() {
+                                    sosBtn.disabled = false;
+                                    sosBtn.innerHTML = "SOS";
+                                    sosBtn.classList.remove("bg-green-600");
+                                    sosBtn.classList.add("bg-red-600", "hover:bg-red-700", "sos-pulse");
+                                    statusEl.textContent = "";
+                                    removePhoto();
+                                }, 4000);
+                            } else {
+                                throw new Error(result.error || "Server error " + response.status);
+                            }
+                        });
+                    });
+                });
+            });
+        }).catch(function(err) {
+            // ERROR
+            sosBtn.innerHTML = "✗";
+            sosBtn.classList.remove("bg-red-600", "hover:bg-red-700");
+            sosBtn.classList.add("bg-red-800");
+            statusEl.textContent = "❌ Failed: " + err.message;
+            statusEl.className = "mt-6 font-semibold text-red-600";
+            showToast("SOS failed: " + err.message, "error");
+
+            setTimeout(function() {
+                sosBtn.disabled = false;
+                sosBtn.innerHTML = "SOS";
+                sosBtn.classList.remove("bg-red-800");
+                sosBtn.classList.add("bg-red-600", "hover:bg-red-700", "sos-pulse");
+            }, 3000);
+        });
+    }
+
+    // =============================================
+    // PWA INSTALL
+    // =============================================
+    var deferredPrompt;
+    window.addEventListener("beforeinstallprompt", function(e) {
+        e.preventDefault();
+        deferredPrompt = e;
+        document.getElementById("installAppBtn").style.display = "inline-block";
+    });
+
+    document.getElementById("installAppBtn").addEventListener("click", function() {
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            deferredPrompt.userChoice.then(function(choiceResult) {
+                if (choiceResult.outcome === "accepted") {
+                    document.getElementById("installAppBtn").style.display = "none";
+                }
+                deferredPrompt = null;
             });
         }
+    });
+
+    console.log("ResilientCampus initialized — API:", API_BASE);
     </script>
-    <script>
-let deferredPrompt;
-const installBtn = document.getElementById('installAppBtn');
-
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-    installBtn.style.display = 'inline-block';
-});
-
-installBtn.addEventListener('click', async () => {
-    if (deferredPrompt) {
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        if (outcome === 'accepted') {
-            console.log('App Installed Successfully');
-        }
-        deferredPrompt = null;
-        installBtn.style.display = 'none';
-    }
-});
-</script>
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('/sw.js').then(reg => {
-    reg.onupdatefound = () => {
-      const installingWorker = reg.installing;
-      installingWorker.onstatechange = () => {
-        if (installingWorker.state === 'installed') {
-          window.location.reload();
-        }
-      };
-    };
-  });
-}
 </body>
 </html>
