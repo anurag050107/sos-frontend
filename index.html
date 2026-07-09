@@ -883,13 +883,15 @@
 
                                        
                   var sosData = {
-                    name: "Campus User",
-                      studentId: "N/A",
+                        name: "Campus User",
+                        studentId: "N/A",
                         location: locationStr,
                         phone: "N/A",
                         description: "Emergency SOS triggered from campus",
                         imageUrl: imageUrl,
-                        status: "active"
+                        status: "active",
+                        latitude: loc.lat ? parseFloat(loc.lat) : null,
+                        longitude: loc.lng ? parseFloat(loc.lng) : null
                     };
 
                     return fetch(API_BASE + "/api/trigger-sos", {
