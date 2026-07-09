@@ -556,8 +556,7 @@
           '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
           '<td class="td-name">' + escapeHtml(name) + '</td>' +
           '<td style="color:var(--fg-muted);font-size:13px;">' + escapeHtml(studentId) + '</td>' +
-          '<td class="td-location"><i class="fas fa-location-dot" style="margin-right:4px;color:var(--fg-dim);"></i>' + escapeHtml(location) + '</td>' +
-          '<td class="td-proof">' + proofHtml + '</td>' +
+'<td class="td-location"><i class="fas fa-location-dot" style="margin-right:4px;color:var(--fg-dim);"></i><a href="https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(a.location) + '" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;">' + escapeHtml(location) + '</a></td>' +          '<td class="td-proof">' + proofHtml + '</td>' +
           '<td class="td-time">' + timeStr + '</td>' +
           '<td><div class="td-actions">' +
             (status !== "resolved" ? '<button class="action-btn resolve" title="Resolve" onclick="resolveAlert(\'' + id + '\')"><i class="fas fa-check"></i></button>' : '') +
