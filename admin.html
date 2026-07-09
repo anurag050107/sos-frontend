@@ -1,140 +1,684 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0f172a">
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Campus Security Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .goog-te-banner-frame.skiptranslate, .goog-te-banner-frame, iframe.goog-te-banner-frame { display: none !important; }
-        body { top: 0px !important; }
-        #goog-gt-tt, .goog-te-balloon-frame, .goog-te-tooltip, .goog-te-tooltip-text { display: none !important; }
-        .goog-text-highlight { background-color: transparent !important; box-shadow: none !important; }
-        .skiptranslate:not(#select-language) { display: none !important; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SOS Admin Dashboard</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+        integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --bg-card: #131720;
+      --bg-input: #1a1f2e;
+      --bg-hover: #1e2538;
+      --fg: #e2e8f0;
+      --fg-muted: #64748b;
+      --fg-dim: #334155;
+      --accent: #ef4444;
+      --accent-hover: #dc2626;
+      --accent-soft: rgba(239,68,68,0.12);
+      --green: #22c55e;
+      --green-soft: rgba(34,197,94,0.12);
+      --blue: #3b82f6;
+      --blue-soft: rgba(59,130,246,0.12);
+      --yellow: #f59e0b;
+      --yellow-soft: rgba(245,158,11,0.12);
+      --border: #1e293b;
+      --radius: 10px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.3);
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .navbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 32px;
+      height: 64px;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .navbar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .navbar-brand .icon-wrap {
+      width: 36px; height: 36px;
+      border-radius: 8px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--accent);
+      font-size: 16px;
+    }
+    .navbar-actions { display: flex; align-items: center; gap: 12px; }
+    .nav-btn {
+      padding: 8px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--fg-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .nav-btn:hover { background: var(--bg-hover); color: var(--fg); border-color: var(--fg-dim); }
+    .main { max-width: 1280px; margin: 0 auto; padding: 28px 32px 60px; }
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      transition: border-color 0.2s;
+    }
+    .stat-card:hover { border-color: var(--fg-dim); }
+    .stat-icon {
+      width: 48px; height: 48px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .stat-icon.red { background: var(--accent-soft); color: var(--accent); }
+    .stat-icon.green { background: var(--green-soft); color: var(--green); }
+    .stat-icon.blue { background: var(--blue-soft); color: var(--blue); }
+    .stat-icon.yellow { background: var(--yellow-soft); color: var(--yellow); }
+    .stat-value { font-size: 28px; font-weight: 800; line-height: 1; }
+    .stat-label { font-size: 12px; color: var(--fg-muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .table-section {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .table-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .table-title { font-size: 16px; font-weight: 700; }
+    .table-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .search-box {
+      padding: 8px 14px;
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--fg);
+      font-size: 13px;
+      width: 220px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box:focus { border-color: var(--blue); }
+    .search-box::placeholder { color: var(--fg-dim); }
+    .btn {
+      padding: 8px 18px;
+      border-radius: 8px;
+      border: none;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .btn-danger { background: var(--accent); color: #fff; }
+    .btn-danger:hover { background: var(--accent-hover); }
+    .btn-danger:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-outline { background: transparent; color: var(--fg-muted); border: 1px solid var(--border); }
+    .btn-outline:hover { background: var(--bg-hover); color: var(--fg); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    thead th {
+      text-align: left;
+      padding: 14px 24px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--fg-muted);
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: var(--bg-hover); }
+    tbody td { padding: 14px 24px; vertical-align: middle; }
+    .td-name { font-weight: 600; }
+    .td-location { color: var(--fg-muted); }
+    .td-proof a { color: var(--blue); text-decoration: none; font-weight: 500; }
+    .td-proof a:hover { text-decoration: underline; }
+    .td-time { color: var(--fg-muted); font-size: 13px; white-space: nowrap; }
+    .td-actions { display: flex; gap: 6px; }
+    .action-btn {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--fg-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      transition: all 0.15s;
+    }
+    .action-btn:hover { background: var(--bg-hover); color: var(--fg); }
+    .action-btn.delete:hover { background: var(--accent-soft); color: var(--accent); border-color: rgba(239,68,68,0.3); }
+    .action-btn.resolve:hover { background: var(--green-soft); color: var(--green); border-color: rgba(34,197,94,0.3); }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 100px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .badge.active { background: var(--accent-soft); color: var(--accent); }
+    .badge.resolved { background: var(--green-soft); color: var(--green); }
+    .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .state-msg { padding: 60px 24px; text-align: center; }
+    .state-msg .state-icon { font-size: 40px; margin-bottom: 16px; color: var(--fg-dim); }
+    .state-msg .state-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; }
+    .state-msg .state-desc { font-size: 13px; color: var(--fg-muted); max-width: 400px; margin: 0 auto 20px; line-height: 1.6; }
+    .state-msg.error .state-icon { color: var(--accent); }
+    .toast-container {
+      position: fixed;
+      top: 80px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .toast {
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      animation: slideIn 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 360px;
+    }
+    .toast.success { background: #166534; color: #bbf7d0; }
+    .toast.error { background: #7f1d1d; color: #fecaca; }
+    .toast.info { background: #1e3a5f; color: #bfdbfe; }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    .spinner {
+      width: 24px; height: 24px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 12px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(4px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px;
+      max-width: 400px;
+      width: 90%;
+      box-shadow: var(--shadow);
+    }
+    .modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .modal-box p { font-size: 13px; color: var(--fg-muted); margin-bottom: 20px; line-height: 1.6; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+    .debug-bar {
+      padding: 10px 24px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      font-family: monospace;
+      font-size: 11px;
+      color: var(--fg-dim);
+      display: flex;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .debug-bar span { color: var(--fg-muted); }
+    @media (max-width: 768px) {
+      .navbar { padding: 0 16px; }
+      .main { padding: 20px 16px 40px; }
+      .table-header { flex-direction: column; align-items: stretch; }
+      .search-box { width: 100%; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .stats-row { grid-template-columns: 1fr; }
+    }
+  </style>
 </head>
-<body class="bg-slate-900 text-white font-sans p-8">
+<body>
 
-    <div id="google_translate_element" style="position: absolute; left: -9999px; z-index: -9999;"></div>
-    <script>
-        function googleTranslateElementInit() {
-            new google.translate.TranslateElement({
-                pageLanguage: 'en',
-                includedLanguages: 'en,hi,bn,gu,kn,mr,or,pa,ta,te',
-                layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
-                autoDisplay: false
-            }, 'google_translate_element');
-        }
-    </script>
-    <script src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+  <nav class="navbar">
+    <div class="navbar-brand">
+      <div class="icon-wrap"><i class="fas fa-satellite-dish"></i></div>
+      SOS Admin
+    </div>
+    <div class="navbar-actions">
+      <a href="index.html" class="nav-btn"><i class="fas fa-arrow-left"></i> Back to Site</a>
+      <button class="nav-btn" onclick="loadData()"><i class="fas fa-rotate"></i> Refresh</button>
+    </div>
+  </nav>
 
-    <div class="max-w-4xl mx-auto">
-        <div class="flex justify-between items-center mb-6 border-b border-slate-800 pb-4">
-            <h1 class="text-3xl font-bold text-red-500 flex items-center">
-                <span class="mr-2">🚨</span> Live SOS Alerts
-            </h1>
-            
-            <div id="select-language" class="notranslate flex items-center space-x-1.5 bg-slate-850 hover:bg-slate-800 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition-colors cursor-pointer text-sm">
-                <span class="text-base leading-none">🌐</span>
-                <select id="language-picker" onchange="changeLanguage(this.value)" class="bg-transparent font-semibold cursor-pointer focus:outline-none text-xs">
-                    <option value="en">English</option>
-                    <option value="hi">हिन्दी (Hindi)</option>
-                    <option value="bn">বাংলা (Bengali)</option>
-                    <option value="gu">ગુજરાતી (Gujarati)</option>
-                    <option value="kn">ಕನ್ನಡ (Kannada)</option>
-                    <option value="mr">मराठी (Marathi)</option>
-                    <option value="or">ଓଡ଼ିଆ (Odia)</option>
-                    <option value="pa">ਪੰਜਾਬੀ (Punjabi)</option>
-                    <option value="ta">தமிழ் (Tamil)</option>
-                    <option value="te">తెలుగు (Telugu)</option>
-                </select>
-            </div>
+  <!-- Debug bar so you always see what's happening -->
+  <div class="debug-bar" id="debugBar">
+    API: <span id="dbgApi">--</span> |
+    Health: <span id="dbgHealth">checking...</span> |
+    Alerts: <span id="dbgCount">--</span> |
+    MongoDB: <span id="dbgDb">--</span>
+  </div>
+
+  <main class="main">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon red"><i class="fas fa-bell"></i></div>
+        <div>
+          <div class="stat-value" id="statTotal">--</div>
+          <div class="stat-label">Total Alerts</div>
         </div>
-        <div class="bg-slate-800 rounded-lg overflow-hidden shadow-xl">
-            <div class="flex justify-end mb-4 p-4 pb-0">
-                <button onclick="clearDatabase()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-lg flex items-center gap-2 text-sm">
-                    🗑️ Clear All Alerts
-                </button>
-            </div>
-            <table class="w-full text-left">
-                <thead class="bg-slate-700 text-slate-300">
-                    <tr>
-                        <th class="p-4 text-left">Name</th>
-                        <th class="p-4 text-left">Location</th>
-                        <th class="p-4 text-left">Verification Proof</th>
-                        <th class="p-4 text-left">Time Received</th>
-                    </tr>
-                </thead>
-                <tbody id="alertTable" class="divide-y divide-slate-700">
-                </tbody>
-            </table>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon yellow"><i class="fas fa-circle-exclamation"></i></div>
+        <div>
+          <div class="stat-value" id="statActive">--</div>
+          <div class="stat-label">Active</div>
         </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon green"><i class="fas fa-circle-check"></i></div>
+        <div>
+          <div class="stat-value" id="statResolved">--</div>
+          <div class="stat-label">Resolved</div>
+        </div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon blue"><i class="fas fa-clock"></i></div>
+        <div>
+          <div class="stat-value" id="statToday">--</div>
+          <div class="stat-label">Today</div>
+        </div>
+      </div>
     </div>
 
-    <script>
-        const tableBody = document.querySelector('tbody');
+    <div class="table-section">
+      <div class="table-header">
+        <div class="table-title">Live SOS Alerts</div>
+        <div class="table-header-actions">
+          <input type="text" class="search-box" id="searchBox" placeholder="Search name or location..." oninput="filterTable()">
+          <button class="btn btn-outline" onclick="loadData()"><i class="fas fa-rotate"></i> Refresh</button>
+          <button class="btn btn-danger" id="clearAllBtn" onclick="confirmClearAll()" disabled>
+            <i class="fas fa-trash"></i> Clear All
+          </button>
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Status</th>
+              <th>Name</th>
+              <th>Student ID</th>
+              <th>Location</th>
+              <th>Proof</th>
+              <th>Time</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="tableBody">
+            <tr><td colspan="7">
+              <div class="state-msg" id="stateMsg">
+                <div class="spinner"></div>
+                <div class="state-title">Loading alerts...</div>
+              </div>
+            </td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
 
-        async function loadAlerts() {
-            try {
-                const response = await fetch('https://disaster-api-af2w.onrender.com/api/all-alerts');
-                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-                
-                const alerts = await response.json();
-                tableBody.innerHTML = "";
+  <div class="modal-overlay" id="confirmModal">
+    <div class="modal-box">
+      <h3 id="modalTitle">Confirm</h3>
+      <p id="modalDesc">Are you sure?</p>
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+      </div>
+    </div>
+  </div>
 
-                alerts.reverse().forEach(alert => {
-                    const lat = alert.latitude || 0;
-                    const lon = alert.longitude || 0;
-                    const mapsLink = `https://www.google.com/maps?q=${lat},${lon}`;
-                    let mediaContent = `<span class="text-slate-500 italic text-xs">No media attached</span>`;
-                    
-                    if (alert.mediaUrl && alert.mediaUrl !== "No media uploaded" && alert.mediaUrl.trim() !== "") {
-                        if (alert.mediaUrl.match(/\.(mp4|webm|mov|ogg)$/i) || alert.mediaUrl.includes("/video/")) {
-                            mediaContent = `<video src="${alert.mediaUrl}" controls class="w-32 h-20 object-cover rounded-md border border-slate-600 bg-black shadow-sm"></video>`;
-                        } else {
-                          mediaContent = `<a href="${alert.mediaUrl}" download="Emergency_Proof"><img src="${alert.mediaUrl}" alt="Disaster Proof" class="w-24 h-16 object-cover rounded-md border border-slate-600 shadow-sm hover:scale-105 transition-transform duration-200"></a>`;                        }
-                    }
+  <div class="toast-container" id="toastContainer"></div>
 
-                    const row = `
-                    <tr class="hover:bg-slate-800 transition border-b border-slate-700">
-                        <td class="p-4 font-bold text-blue-400">${alert.studentId || "Unknown"}</td>
-                        <td class="p-4 text-emerald-400"><a href="${mapsLink}" target="_blank" class="hover:underline flex items-center gap-2">📍 ${lat.toFixed(4)}, ${lon.toFixed(4)}</a></td>
-                        <td class="p-4">${mediaContent}</td>
-                        <td class="p-4 text-slate-400 font-mono">${alert.time || "No Date"}</td>
-                    </tr>`;
-                    tableBody.innerHTML += row;
-                });
-            } catch (error) {
-                console.error("Failed to load alerts:", error);
-                tableBody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-red-500 font-bold">Error loading dashboard data. Check backend connection.</td></tr>`;
-            }
+  <script>
+    // =============================================
+    // CORRECT API BASE — matches your Spring Boot app
+    // =============================================
+    const API = "https://disaster-api-af2w.onrender.com";
+
+    // =============================================
+    // CORRECT ENDPOINTS — matches your SOSController
+    // =============================================
+    const ENDPOINTS = {
+      health:     API + "/api/health",
+      alerts:     API + "/api/all-alerts",
+      trigger:    API + "/api/trigger-sos",
+      upload:     API + "/api/upload",
+      resolve:    (id) => API + "/api/alert/" + id + "/resolve",
+      delete:     (id) => API + "/api/alert/" + id,
+      clearAll:   API + "/api/clear-all"
+    };
+
+    let allAlerts = [];
+
+    // Show API URL in debug bar
+    document.getElementById("dbgApi").textContent = API;
+
+    // =============================================
+    // Safe fetch with timeout
+    // =============================================
+    async function apiFetch(url, options = {}, timeoutMs = 50000) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const res = await fetch(url, { ...options, signal: controller.signal });
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); }
+        catch (e) { data = { error: "Non-JSON response: " + text.substring(0, 200) }; }
+        return { ok: res.ok, status: res.status, data };
+      } catch (err) {
+        if (err.name === "AbortError") return { ok: false, status: 0, data: { error: "Timeout — server may be starting up. Wait 30s and retry." } };
+        return { ok: false, status: 0, data: { error: "Network/CORS error: " + err.message } };
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    // =============================================
+    // Health check
+    // =============================================
+    async function checkHealth() {
+      const el = document.getElementById("dbgHealth");
+      el.textContent = "checking...";
+      const r = await apiFetch(ENDPOINTS.health, {}, 30000);
+      if (r.ok) {
+        el.textContent = "OK";
+        el.style.color = "#22c55e";
+        document.getElementById("dbgDb").textContent = "Connected";
+        document.getElementById("dbgDb").style.color = "#22c55e";
+      } else {
+        el.textContent = r.status === 0 ? "UNREACHABLE" : "ERROR " + r.status;
+        el.style.color = "#ef4444";
+        document.getElementById("dbgDb").textContent = r.data.error ? r.data.error.substring(0, 40) : "Disconnected";
+        document.getElementById("dbgDb").style.color = "#ef4444";
+      }
+    }
+
+    // =============================================
+    // Load alerts
+    // =============================================
+    async function loadData() {
+      const tbody = document.getElementById("tableBody");
+      tbody.innerHTML = '<tr><td colspan="7"><div class="state-msg"><div class="spinner"></div><div class="state-title">Loading alerts...</div></div></td></tr>';
+
+      await checkHealth();
+
+      const r = await apiFetch(ENDPOINTS.alerts);
+
+      if (!r.ok) {
+        const errMsg = r.data.error || ("HTTP " + r.status);
+        tbody.innerHTML = `
+          <tr><td colspan="7">
+            <div class="state-msg error">
+              <div class="state-icon"><i class="fas fa-triangle-exclamation"></i></div>
+              <div class="state-title">Error loading dashboard data</div>
+              <div class="state-desc">${escapeHtml(errMsg)}</div>
+              <div class="state-desc" style="font-family:monospace;font-size:11px;color:var(--fg-dim);margin-top:8px;">
+                Endpoint: ${ENDPOINTS.alerts}<br>
+                Status: ${r.status || 'network error'}
+              </div>
+              <button class="btn btn-outline" onclick="loadData()" style="margin-top:12px;"><i class="fas fa-rotate"></i> Retry</button>
+            </div>
+          </td></tr>`;
+        showToast("Failed: " + errMsg, "error");
+        document.getElementById("dbgCount").textContent = "0";
+        return;
+      }
+
+      // Parse: backend returns { success: true, alerts: [...], count: N }
+      let alerts = [];
+      if (Array.isArray(r.data)) {
+        alerts = r.data;
+      } else if (r.data.alerts && Array.isArray(r.data.alerts)) {
+        alerts = r.data.alerts;
+      }
+
+      allAlerts = alerts;
+      document.getElementById("dbgCount").textContent = alerts.length;
+      renderTable(allAlerts);
+      updateStats(allAlerts);
+      document.getElementById("clearAllBtn").disabled = alerts.length === 0;
+      showToast("Loaded " + alerts.length + " alert(s)", "success");
+    }
+
+    // =============================================
+    // Render table
+    // =============================================
+    function renderTable(alerts) {
+      const tbody = document.getElementById("tableBody");
+      if (!alerts || alerts.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7"><div class="state-msg"><div class="state-icon"><i class="fas fa-inbox"></i></div><div class="state-title">No SOS alerts</div><div class="state-desc">Alerts will appear here when submitted.</div></div></td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = alerts.map((a) => {
+        const id = a.id || a._id || "";
+        const name = a.name || a.studentId || "Unknown";
+        const studentId = a.studentId || "--";
+        const location = a.location || "Unknown";
+        const status = (a.status || "active").toLowerCase();
+        const badgeClass = status === "resolved" ? "resolved" : "active";
+        const badgeText = status === "resolved" ? "Resolved" : "Active";
+
+        let proofHtml = "N/A";
+        if (a.imageUrl) {
+          proofHtml = '<a href="' + escapeHtml(a.imageUrl) + '" target="_blank" rel="noopener"><i class="fas fa-image"></i> View</a>';
         }
-        
-        window.addEventListener('load', loadAlerts);
 
-        // Foolproof Translation Script
-        function changeLanguage(langCode) {
-            localStorage.setItem("preferredLanguage", langCode);
-            var selectEl = document.querySelector('.goog-te-combo');
-            if (selectEl) {
-                selectEl.value = langCode;
-                selectEl.dispatchEvent(new Event('change'));
-            } else {
-                setTimeout(function() { changeLanguage(langCode); }, 500);
+        let timeStr = "N/A";
+        if (a.time) {
+          try {
+            const d = new Date(a.time);
+            if (!isNaN(d.getTime())) {
+              timeStr = d.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
             }
+          } catch (e) { timeStr = a.time; }
         }
 
-        window.addEventListener('load', function() {
-            var savedLang = localStorage.getItem("preferredLanguage") || "en";
-            var picker = document.getElementById("language-picker");
-            if (picker) picker.value = savedLang;
-            if (savedLang !== "en") {
-                setTimeout(function() { changeLanguage(savedLang); }, 1000);
-            }
-        });
-    </script>
-    
+        return '<tr>' +
+          '<td><span class="badge ' + badgeClass + '">' + badgeText + '</span></td>' +
+          '<td class="td-name">' + escapeHtml(name) + '</td>' +
+          '<td style="color:var(--fg-muted);font-size:13px;">' + escapeHtml(studentId) + '</td>' +
+          '<td class="td-location"><i class="fas fa-location-dot" style="margin-right:4px;color:var(--fg-dim);"></i>' + escapeHtml(location) + '</td>' +
+          '<td class="td-proof">' + proofHtml + '</td>' +
+          '<td class="td-time">' + timeStr + '</td>' +
+          '<td><div class="td-actions">' +
+            (status !== "resolved" ? '<button class="action-btn resolve" title="Resolve" onclick="resolveAlert(\'' + id + '\')"><i class="fas fa-check"></i></button>' : '') +
+            '<button class="action-btn delete" title="Delete" onclick="deleteAlert(\'' + id + '\')"><i class="fas fa-trash"></i></button>' +
+          '</div></td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    // =============================================
+    // Stats
+    // =============================================
+    function updateStats(alerts) {
+      const total = alerts.length;
+      const active = alerts.filter(a => (a.status || "active").toLowerCase() !== "resolved").length;
+      const resolved = total - active;
+      const today = new Date().toDateString();
+      const todayCount = alerts.filter(a => {
+        if (!a.time) return false;
+        try { return new Date(a.time).toDateString() === today; } catch (e) { return false; }
+      }).length;
+      animateNum("statTotal", total);
+      animateNum("statActive", active);
+      animateNum("statResolved", resolved);
+      animateNum("statToday", todayCount);
+    }
+
+    function animateNum(elId, target) {
+      const el = document.getElementById(elId);
+      const start = parseInt(el.textContent) || 0;
+      if (start === target) { el.textContent = target; return; }
+      const duration = 400;
+      const t0 = performance.now();
+      function step(now) {
+        const p = Math.min((now - t0) / duration, 1);
+        el.textContent = Math.round(start + (target - start) * (1 - Math.pow(1 - p, 3)));
+        if (p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+
+    // =============================================
+    // Search
+    // =============================================
+    function filterTable() {
+      const q = document.getElementById("searchBox").value.toLowerCase().trim();
+      if (!q) { renderTable(allAlerts); return; }
+      renderTable(allAlerts.filter(a => {
+        return ((a.name || "") + (a.studentId || "") + (a.location || "")).toLowerCase().includes(q);
+      }));
+    }
+
+    // =============================================
+    // Resolve
+    // =============================================
+    async function resolveAlert(id) {
+      const r = await apiFetch(ENDPOINTS.resolve(id), { method: "PUT" });
+      if (r.ok) { showToast("Marked as resolved", "success"); loadData(); }
+      else { showToast("Failed: " + (r.data.error || "Unknown"), "error"); }
+    }
+
+    // =============================================
+    // Delete
+    // =============================================
+    function deleteAlert(id) {
+      openModal("Delete Alert", "Are you sure you want to delete this alert?", async () => {
+        const r = await apiFetch(ENDPOINTS.delete(id), { method: "DELETE" });
+        if (r.ok) { showToast("Deleted", "success"); loadData(); }
+        else { showToast("Failed: " + (r.data.error || "Unknown"), "error"); }
+      });
+    }
+
+    // =============================================
+    // Clear all
+    // =============================================
+    function confirmClearAll() {
+      openModal("Clear All", "Delete ALL " + allAlerts.length + " alerts? This cannot be undone.", async () => {
+        const r = await apiFetch(ENDPOINTS.clearAll, { method: "DELETE" });
+        if (r.ok) { showToast("All alerts cleared", "success"); loadData(); }
+        else { showToast("Failed: " + (r.data.error || "Unknown"), "error"); }
+      });
+    }
+
+    // =============================================
+    // Modal
+    // =============================================
+    function openModal(title, desc, onConfirm) {
+      document.getElementById("modalTitle").textContent = title;
+      document.getElementById("modalDesc").textContent = desc;
+      document.getElementById("confirmModal").classList.add("open");
+      const btn = document.getElementById("modalConfirmBtn");
+      const newBtn = btn.cloneNode(true);
+      btn.parentNode.replaceChild(newBtn, btn);
+      newBtn.addEventListener("click", () => { closeModal(); onConfirm(); });
+    }
+    function closeModal() { document.getElementById("confirmModal").classList.remove("open"); }
+    document.getElementById("confirmModal").addEventListener("click", (e) => { if (e.target === e.currentTarget) closeModal(); });
+    document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeModal(); });
+
+    // =============================================
+    // Toast
+    // =============================================
+    function showToast(msg, type) {
+      const c = document.getElementById("toastContainer");
+      const icons = { success: "fa-circle-check", error: "fa-circle-xmark", info: "fa-circle-info" };
+      const t = document.createElement("div");
+      t.className = "toast " + type;
+      t.innerHTML = '<i class="fas ' + (icons[type] || icons.info) + '"></i> ' + escapeHtml(msg);
+      c.appendChild(t);
+      setTimeout(() => { t.style.opacity = "0"; t.style.transform = "translateX(100%)"; t.style.transition = "all 0.3s"; setTimeout(() => t.remove(), 300); }, 3500);
+    }
+
+    function escapeHtml(s) { if (!s) return ""; const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+    // =============================================
+    // INIT
+    // =============================================
+    console.log("Admin init — API:", API);
+    console.log("Endpoints:", ENDPOINTS);
+    loadData();
+  </script>
 </body>
 </html>
