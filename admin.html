@@ -409,10 +409,14 @@
   <div class="toast-container" id="toastContainer"></div>
 
   <script>
-    // ===== AUTH GATE =====
+        // ===== AUTH GATE =====
     const TOKEN = localStorage.getItem('sos_token');
+    const ROLE = localStorage.getItem('sos_role');
     if (!TOKEN) {
         window.location.href = 'login.html';
+    }
+    if (ROLE === 'super_master') {
+        window.location.href = 'master.html';
     }
     function logout() {
         localStorage.removeItem('sos_token');
