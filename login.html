@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Login - SOS Alert System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-gray-900 rounded-2xl p-8 w-full max-w-md shadow-2xl border border-gray-800">
+        <div class="text-center mb-8">
+            <div class="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                </svg>
+            </div>
+            <h1 class="text-2xl font-bold text-white">Admin Access</h1>
+            <p class="text-gray-400 mt-1 text-sm">SOS Alert Management System</p>
+        </div>
+
+        <div class="flex bg-gray-800 rounded-lg p-1 mb-6">
+            <button id="loginTab" onclick="switchTab(true)" class="flex-1 py-2 rounded-md text-sm font-medium text-white bg-red-600 transition-all">Login</button>
+            <button id="registerTab" onclick="switchTab(false)" class="flex-1 py-2 rounded-md text-sm font-medium text-gray-400 transition-all">Create Account</button>
+        </div>
+
+        <form id="authForm" onsubmit="handleSubmit(event)">
+            <div id="nameField" class="mb-4 hidden">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Full Name</label>
+                <input type="text" id="name" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="John Doe">
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Email Address</label>
+                <input type="email" id="email" required class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="admin@campus.edu">
+            </div>
+
+            <div class="mb-6">
+                <label class="block text-sm font-medium text-gray-300 mb-1">Password</label>
+                <input type="password" id="password" required minlength="6" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-transparent" placeholder="••••••••">
+            </div>
+
+            <div id="errorMsg" class="hidden mb-4 p-3 bg-red-900/50 border border-red-700 rounded-lg text-red-300 text-sm"></div>
+            <div id="successMsg" class="hidden mb-4 p-3 bg-green-900/50 border border-green-700 rounded-lg text-green-300 text-sm"></div>
+
+            <button type="submit" id="submitBtn" class="w-full bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold py-3 rounded-lg transition flex items-center justify-center gap-2">
+                <span id="btnText">Login</span>
+                <svg id="btnSpinner" class="hidden animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+            </button>
+        </form>
+
+        <p class="text-center text-gray-600 text-xs mt-6">Authorized personnel only</p>
+    </div>
+
+    <script>
+        const API = "https://disaster-api-af2w.onrender.com";
+        let isLogin = true;
+
+        if (localStorage.getItem('sos_token')) {
+            window.location.href = 'admin.html';
+        }
+
+        function switchTab(login) {
+            isLogin = login;
+            const lt = document.getElementById('loginTab');
+            const rt = document.getElementById('registerTab');
+            const nf = document.getElementById('nameField');
+
+            if (login) {
+                lt.className = 'flex-1 py-2 rounded-md text-sm font-medium text-white bg-red-600 transition-all';
+                rt.className = 'flex-1 py-2 rounded-md text-sm font-medium text-gray-400 transition-all';
+                nf.classList.add('hidden');
+                document.getElementById('btnText').textContent = 'Login';
+            } else {
+                rt.className = 'flex-1 py-2 rounded-md text-sm font-medium text-white bg-red-600 transition-all';
+                lt.className = 'flex-1 py-2 rounded-md text-sm font-medium text-gray-400 transition-all';
+                nf.classList.remove('hidden');
+                document.getElementById('btnText').textContent = 'Create Account';
+            }
+            hideMessages();
+        }
+
+        function showError(msg) {
+            document.getElementById('errorMsg').textContent = msg;
+            document.getElementById('errorMsg').classList.remove('hidden');
+            document.getElementById('successMsg').classList.add('hidden');
+        }
+
+        function showSuccess(msg) {
+            document.getElementById('successMsg').textContent = msg;
+            document.getElementById('successMsg').classList.remove('hidden');
+            document.getElementById('errorMsg').classList.add('hidden');
+        }
+
+        function hideMessages() {
+            document.getElementById('errorMsg').classList.add('hidden');
+            document.getElementById('successMsg').classList.add('hidden');
+        }
+
+        async function handleSubmit(e) {
+            e.preventDefault();
+            hideMessages();
+
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            const name = document.getElementById('name').value.trim();
+
+            if (!email || !password) {
+                showError('Please fill in all fields.');
+                return;
+            }
+
+            const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+            const body = { email, password };
+            if (!isLogin) body.name = name;
+
+            document.getElementById('btnSpinner').classList.remove('hidden');
+            document.getElementById('submitBtn').disabled = true;
+
+            try {
+                const res = await fetch(API + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+
+                const data = await res.json();
+
+                if (data.success) {
+                    localStorage.setItem('sos_token', data.token);
+                    localStorage.setItem('sos_user', JSON.stringify({ email: data.email, name: data.name }));
+                    window.location.href = 'admin.html';
+                } else {
+                    showError(data.message || 'Something went wrong.');
+                }
+            } catch (err) {
+                showError('Cannot reach the server. The app may be waking up — try again in 30 seconds.');
+            } finally {
+                document.getElementById('btnSpinner').classList.add('hidden');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
