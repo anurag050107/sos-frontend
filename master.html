@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Super Master - SOS System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+          integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA=="
+          crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+        :root {
+            --bg: #0b0e14; --bg-card: #131720; --bg-input: #1a1f2e; --bg-hover: #1e2538;
+            --fg: #e2e8f0; --fg-muted: #64748b; --fg-dim: #334155;
+            --accent: #ef4444; --accent-hover: #dc2626; --accent-soft: rgba(239,68,68,0.12);
+            --green: #22c55e; --green-soft: rgba(34,197,94,0.12);
+            --blue: #3b82f6; --blue-soft: rgba(59,130,246,0.12);
+            --yellow: #f59e0b; --yellow-soft: rgba(245,158,11,0.12);
+            --purple: #a855f7; --purple-soft: rgba(168,85,247,0.12);
+            --border: #1e293b; --radius: 10px; --shadow: 0 4px 24px rgba(0,0,0,0.3);
+        }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--fg); min-height: 100vh; }
+        .navbar { display: flex; align-items: center; justify-content: space-between; padding: 0 32px; height: 64px; background: var(--bg-card); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 100; }
+        .navbar-brand { display: flex; align-items: center; gap: 12px; font-size: 18px; font-weight: 700; }
+        .navbar-brand .icon-wrap { width: 36px; height: 36px; border-radius: 8px; background: var(--purple-soft); display: flex; align-items: center; justify-content: center; color: var(--purple); font-size: 16px; }
+        .navbar-actions { display: flex; align-items: center; gap: 12px; }
+        .nav-btn { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--fg-muted); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; text-decoration: none; }
+        .nav-btn:hover { background: var(--bg-hover); color: var(--fg); border-color: var(--fg-dim); }
+        .main { max-width: 1100px; margin: 0 auto; padding: 28px 32px 60px; }
+        .section { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; margin-bottom: 24px; }
+        .section-header { display: flex; align-items: center; justify-content: space-between; padding: 20px 24px; border-bottom: 1px solid var(--border); }
+        .section-title { font-size: 16px; font-weight: 700; display: flex; align-items: center; gap: 10px; }
+        .count-badge { background: var(--accent-soft); color: var(--accent); font-size: 12px; font-weight: 700; padding: 2px 10px; border-radius: 100px; }
+        .count-badge.zero { background: var(--green-soft); color: var(--green); }
+        .btn { padding: 8px 18px; border-radius: 8px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+        .btn-green { background: var(--green); color: #fff; }
+        .btn-green:hover { background: #16a34a; }
+        .btn-danger { background: var(--accent); color: #fff; }
+        .btn-danger:hover { background: var(--accent-hover); }
+        .btn-outline { background: transparent; color: var(--fg-muted); border: 1px solid var(--border); }
+        .btn-outline:hover { background: var(--bg-hover); color: var(--fg); }
+        .btn-yellow { background: var(--yellow); color: #000; }
+        .btn-yellow:hover { background: #d97706; }
+        .empty-state { padding: 48px 24px; text-align: center; }
+        .empty-state i { font-size: 36px; color: var(--fg-dim); margin-bottom: 12px; }
+        .empty-state p { color: var(--fg-muted); font-size: 14px; }
+        .user-card { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border); transition: background 0.15s; }
+        .user-card:last-child { border-bottom: none; }
+        .user-card:hover { background: var(--bg-hover); }
+        .user-info { display: flex; align-items: center; gap: 14px; }
+        .user-avatar { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 16px; flex-shrink: 0; }
+        .user-avatar.pending { background: var(--yellow-soft); color: var(--yellow); }
+        .user-avatar.approved { background: var(--green-soft); color: var(--green); }
+        .user-avatar.rejected { background: var(--accent-soft); color: var(--accent); }
+        .user-avatar.master { background: var(--purple-soft); color: var(--purple); }
+        .user-name { font-weight: 600; font-size: 14px; }
+        .user-email { font-size: 12px; color: var(--fg-muted); }
+        .user-meta { font-size: 11px; color: var(--fg-dim); margin-top: 2px; }
+        .user-actions { display: flex; gap: 8px; }
+        .badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+        .badge.pending { background: var(--yellow-soft); color: var(--yellow); }
+        .badge.approved { background: var(--green-soft); color: var(--green); }
+        .badge.rejected { background: var(--accent-soft); color: var(--accent); }
+        .badge.super_master { background: var(--purple-soft); color: var(--purple); }
+        .toast-container { position: fixed; top: 80px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+        .toast { padding: 12px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; box-shadow: var(--shadow); animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 8px; max-width: 360px; }
+        .toast.success { background: #166534; color: #bbf7d0; }
+        .toast.error { background: #7f1d1d; color: #fecaca; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .spinner { width: 24px; height: 24px; border: 3px solid var(--border); border-top-color: var(--purple); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-overlay.open { display: flex; }
+        .modal-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 28px; max-width: 400px; width: 90%; box-shadow: var(--shadow); }
+        .modal-box h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+        .modal-box p { font-size: 13px; color: var(--fg-muted); margin-bottom: 20px; line-height: 1.6; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+        @media (max-width: 768px) {
+            .navbar { padding: 0 16px; }
+            .main { padding: 20px 16px 40px; }
+            .user-card { flex-direction: column; align-items: flex-start; gap: 12px; }
+            .user-actions { width: 100%; }
+            .user-actions .btn { flex: 1; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar">
+        <div class="navbar-brand">
+            <div class="icon-wrap"><i class="fas fa-crown"></i></div>
+            Super Master
+        </div>
+        <div class="navbar-actions">
+            <span id="userName" class="text-sm" style="color:var(--fg-muted);"></span>
+            <a href="admin.html" class="nav-btn"><i class="fas fa-satellite-dish"></i> Admin Dashboard</a>
+            <button class="nav-btn" onclick="loadUsers()" style="color:var(--purple);border-color:rgba(168,85,247,0.3);"><i class="fas fa-rotate"></i> Refresh</button>
+            <button class="nav-btn" onclick="logout()" style="color:var(--accent);border-color:rgba(239,68,68,0.3);"><i class="fas fa-right-from-bracket"></i> Logout</button>
+        </div>
+    </nav>
+
+    <main class="main">
+        <!-- Pending Requests -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-clock" style="color:var(--yellow);"></i>
+                    Pending Requests
+                    <span class="count-badge" id="pendingCount">0</span>
+                </div>
+            </div>
+            <div id="pendingList">
+                <div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>
+            </div>
+        </div>
+
+        <!-- All Users -->
+        <div class="section">
+            <div class="section-header">
+                <div class="section-title">
+                    <i class="fas fa-users" style="color:var(--blue);"></i>
+                    All Users
+                    <span class="count-badge zero" id="totalCount">0</span>
+                </div>
+            </div>
+            <div id="allUsersList">
+                <div class="empty-state"><div class="spinner"></div><p>Loading...</p></div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box">
+            <h3 id="modalTitle">Confirm</h3>
+            <p id="modalDesc">Are you sure?</p>
+            <div class="modal-actions">
+                <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-danger" id="modalConfirmBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script>
+        const API = "https://disaster-api-af2w.onrender.com";
+        const TOKEN = localStorage.getItem('sos_token');
+        const ROLE = localStorage.getItem('sos_role');
+
+        if (!TOKEN || ROLE !== 'super_master') {
+            window.location.href = 'login.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('sos_token');
+            localStorage.removeItem('sos_user');
+            localStorage.removeItem('sos_role');
+            window.location.href = 'login.html';
+        }
+
+        function headers() {
+            return { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + TOKEN };
+        }
+
+        // Show name
+        try {
+            const user = JSON.parse(localStorage.getItem('sos_user'));
+            if (user && user.name) document.getElementById('userName').textContent = '👑 ' + user.name;
+        } catch(e) {}
+
+        function getInitial(name) {
+            return (name || 'U').charAt(0).toUpperCase();
+        }
+
+        function formatDate(ts) {
+            if (!ts) return 'N/A';
+            try { return new Date(ts).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }); }
+            catch(e) { return ts; }
+        }
+
+        function renderPending(users) {
+            const el = document.getElementById('pendingList');
+            const badge = document.getElementById('pendingCount');
+            badge.textContent = users.length;
+            badge.className = users.length === 0 ? 'count-badge zero' : 'count-badge';
+
+            if (users.length === 0) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><p>No pending requests. All clear!</p></div>';
+                return;
+            }
+
+            el.innerHTML = users.map(u => `
+                <div class="user-card">
+                    <div class="user-info">
+                        <div class="user-avatar pending">${getInitial(u.name)}</div>
+                        <div>
+                            <div class="user-name">${escapeHtml(u.name || 'No name')}</div>
+                            <div class="user-email">${escapeHtml(u.email)}</div>
+                            <div class="user-meta">Registered: ${formatDate(u.createdAt)}</div>
+                        </div>
+                    </div>
+                    <div class="user-actions">
+                        <button class="btn btn-sm btn-green" onclick="approveUser('${u.id}')"><i class="fas fa-check"></i> Approve</button>
+                        <button class="btn btn-sm btn-yellow" onclick="rejectUser('${u.id}')"><i class="fas fa-xmark"></i> Reject</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderAll(users) {
+            const el = document.getElementById('allUsersList');
+            document.getElementById('totalCount').textContent = users.length;
+
+            if (users.length === 0) {
+                el.innerHTML = '<div class="empty-state"><i class="fas fa-users"></i><p>No users yet.</p></div>';
+                return;
+            }
+
+            el.innerHTML = users.map(u => {
+                const avatarClass = u.status === 'approved' ? (u.role === 'super_master' ? 'master' : 'approved') : u.status;
+                const badgeClass = u.role === 'super_master' ? 'super_master' : u.status;
+                const badgeText = u.role === 'super_master' ? 'Super Master' : u.status ? u.status.charAt(0).toUpperCase() + u.status.slice(1) : 'Unknown';
+                const isSelf = u.email === JSON.parse(localStorage.getItem('sos_user') || '{}').email;
+
+                let actions = '';
+                if (!isSelf) {
+                    if (u.status === 'pending') {
+                        actions = `<button class="btn btn-sm btn-green" onclick="approveUser('${u.id}')"><i class="fas fa-check"></i></button>
+                                   <button class="btn btn-sm btn-yellow" onclick="rejectUser('${u.id}')"><i class="fas fa-xmark"></i></button>
+                                   <button class="btn btn-sm btn-danger" onclick="confirmDelete('${u.id}', '${escapeHtml(u.email)}')"><i class="fas fa-trash"></i></button>`;
+                    } else if (u.status === 'rejected') {
+                        actions = `<button class="btn btn-sm btn-green" onclick="approveUser('${u.id}')"><i class="fas fa-undo"></i> Approve</button>
+                                   <button class="btn btn-sm btn-danger" onclick="confirmDelete('${u.id}', '${escapeHtml(u.email)}')"><i class="fas fa-trash"></i></button>`;
+                    } else if (u.status === 'approved' && u.role !== 'super_master') {
+                        actions = `<button class="btn btn-sm btn-yellow" onclick="rejectUser('${u.id}')"><i class="fas fa-ban"></i></button>
+                                   <button class="btn btn-sm btn-danger" onclick="confirmDelete('${u.id}', '${escapeHtml(u.email)}')"><i class="fas fa-trash"></i></button>`;
+                    }
+                } else {
+                    actions = '<span style="font-size:11px;color:var(--fg-dim);">(you)</span>';
+                }
+
+                return `
+                    <div class="user-card">
+                        <div class="user-info">
+                            <div class="user-avatar ${avatarClass}">${getInitial(u.name)}</div>
+                            <div>
+                                <div class="user-name">${escapeHtml(u.name || 'No name')} ${isSelf ? '<span style="font-size:11px;color:var(--purple);">(you)</span>' : ''}</div>
+                                <div class="user-email">${escapeHtml(u.email)}</div>
+                                <div class="user-meta">Joined: ${formatDate(u.createdAt)}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span class="badge ${badgeClass}">${badgeText}</span>
+                            <div class="user-actions">${actions}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function loadUsers() {
+            try {
+                const res = await fetch(API + '/api/auth/users', { headers: headers() });
+                const data = await res.json();
+                if (data.success) {
+                    const pending = data.users.filter(u => u.status === 'pending');
+                    renderPending(pending);
+                    renderAll(data.users);
+                } else {
+                    showToast(data.message || 'Failed to load users', 'error');
+                }
+            } catch(err) {
+                showToast('Server unreachable. Try again in 30s.', 'error');
+            }
+        }
+
+        async function approveUser(id) {
+            try {
+                const res = await fetch(API + '/api/auth/users/' + id + '/approve', { method: 'PUT', headers: headers() });
+                const data = await res.json();
+                if (data.success) { showToast(data.message, 'success'); loadUsers(); }
+                else { showToast(data.message || 'Failed', 'error'); }
+            } catch(err) { showToast('Server error', 'error'); }
+        }
+
+        async function rejectUser(id) {
+            try {
+                const res = await fetch(API + '/api/auth/users/' + id + '/reject', { method: 'PUT', headers: headers() });
+                const data = await res.json();
+                if (data.success) { showToast(data.message, 'success'); loadUsers(); }
+                else { showToast(data.message || 'Failed', 'error'); }
+            } catch(err) { showToast('Server error', 'error'); }
+        }
+
+        function confirmDelete(id, email) {
+            openModal('Delete User', 'Permanently delete ' + email + '? This cannot be undone.', async () => {
+                try {
+                    const res = await fetch(API + '/api/auth/users/' + id, { method: 'DELETE', headers: headers() });
+                    const data = await res.json();
+                    if (data.success) { showToast(data.message, 'success'); loadUsers(); }
+                    else { showToast(data.message || 'Failed', 'error'); }
+                } catch(err) { showToast('Server error', 'error'); }
+            });
+        }
+
+        function openModal(title, desc, onConfirm) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDesc').textContent = desc;
+            document.getElementById('confirmModal').classList.add('open');
+            const btn = document.getElementById('modalConfirmBtn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', () => { closeModal(); onConfirm(); });
+        }
+        function closeModal() { document.getElementById('confirmModal').classList.remove('open'); }
+        document.getElementById('confirmModal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeModal(); });
+
+        function showToast(msg, type) {
+            const c = document.getElementById('toastContainer');
+            const icons = { success: 'fa-circle-check', error: 'fa-circle-xmark' };
+            const t = document.createElement('div');
+            t.className = 'toast ' + type;
+            t.innerHTML = '<i class="fas ' + (icons[type] || 'fa-circle-info') + '"></i> ' + escapeHtml(msg);
+            c.appendChild(t);
+            setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateX(100%)'; t.style.transition = 'all 0.3s'; setTimeout(() => t.remove(), 300); }, 3500);
+        }
+
+        function escapeHtml(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+        loadUsers();
+    </script>
+</body>
+</html>
